@@ -1,0 +1,249 @@
+[gd_scene format=4 uid="uid://c2048suika01"]
+
+[ext_resource type="Script" path="res://scripts/suika.gd" id="1"]
+[ext_resource type="Script" path="res://scripts/camera_rig.gd" id="14"]
+[ext_resource type="AudioStream" path="res://assets/sfx/drop.ogg" id="2"]
+[ext_resource type="AudioStream" path="res://assets/sfx/success.ogg" id="3"]
+[ext_resource type="AudioStream" path="res://assets/sfx/achieve.ogg" id="4"]
+[ext_resource type="AudioStream" path="res://assets/sfx/error.ogg" id="5"]
+[ext_resource type="AudioStream" path="res://assets/sfx/click.ogg" id="6"]
+[ext_resource type="Texture2D" path="res://assets/ui/key_w.png" id="10"]
+[ext_resource type="Texture2D" path="res://assets/ui/key_a.png" id="11"]
+[ext_resource type="Texture2D" path="res://assets/ui/key_s.png" id="12"]
+[ext_resource type="Texture2D" path="res://assets/ui/key_d.png" id="13"]
+
+[sub_resource type="Environment" id="Env_1"]
+background_mode = 1
+background_color = Color(0.09, 0.1, 0.16, 1)
+ambient_light_source = 2
+ambient_light_color = Color(0.7, 0.75, 0.9, 1)
+ambient_light_energy = 0.35
+tonemap_mode = 2
+
+[node name="Suika" type="Node3D"]
+process_mode = 3
+script = ExtResource("1")
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Env_1")
+
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
+transform = Transform3D(0.7, -0.5, 0.5, 0, 0.7, 0.7, -0.7, -0.5, 0.5, 0, 8, 4)
+light_energy = 0.4
+shadow_enabled = true
+
+[node name="CameraRig" type="Node3D" parent="."]
+position = Vector3(0, 5, 0)
+script = ExtResource("14")
+start_yaw = 0.0
+start_pitch = -0.75
+start_dist = 16.0
+
+[node name="Yaw" type="Node3D" parent="CameraRig"]
+
+[node name="Pitch" type="Node3D" parent="CameraRig/Yaw"]
+rotation = Vector3(-0.75, 0, 0)
+
+[node name="Camera3D" type="Camera3D" parent="CameraRig/Yaw/Pitch"]
+position = Vector3(0, 0, 16.0)
+fov = 50.0
+current = true
+
+[node name="Fruits" type="Node3D" parent="."]
+
+[node name="Held" type="Node3D" parent="."]
+
+[node name="SfxDrop" type="AudioStreamPlayer" parent="."]
+stream = ExtResource("2")
+volume_db = -10.0
+bus = &"SFX"
+
+[node name="SfxMerge" type="AudioStreamPlayer" parent="."]
+stream = ExtResource("3")
+volume_db = -8.0
+bus = &"SFX"
+
+[node name="SfxFanfare" type="AudioStreamPlayer" parent="."]
+stream = ExtResource("4")
+volume_db = -8.0
+bus = &"SFX"
+
+[node name="SfxOver" type="AudioStreamPlayer" parent="."]
+stream = ExtResource("5")
+volume_db = -10.0
+bus = &"SFX"
+
+[node name="SfxRestart" type="AudioStreamPlayer" parent="."]
+stream = ExtResource("6")
+volume_db = -12.0
+bus = &"SFX"
+
+[node name="UI" type="CanvasLayer" parent="."]
+
+[node name="ScoreLabel" type="Label" parent="UI"]
+offset_left = 16.0
+offset_top = 12.0
+offset_right = 300.0
+offset_bottom = 44.0
+theme_override_font_sizes/font_size = 28
+text = "점수: 0"
+
+[node name="BestLabel" type="Label" parent="UI"]
+offset_left = 16.0
+offset_top = 48.0
+offset_right = 300.0
+offset_bottom = 76.0
+theme_override_font_sizes/font_size = 20
+text = "최고: 0"
+
+[node name="NextLabel" type="Label" parent="UI"]
+offset_left = 16.0
+offset_top = 80.0
+offset_right = 400.0
+offset_bottom = 108.0
+theme_override_font_sizes/font_size = 20
+text = "다음: ?"
+
+[node name="HelpLabel" type="Label" parent="UI"]
+anchor_left = 0.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 16.0
+offset_top = -34.0
+offset_right = -16.0
+offset_bottom = -10.0
+theme_override_font_sizes/font_size = 15
+text = "좌드래그 회전 · 휠 줌 · WASD 이동 · 클릭/스페이스 낙하 · P 일시정지 · R 재시작 · 모바일: 화면 버튼"
+horizontal_alignment = 1
+
+[node name="MobilePad" type="Control" parent="UI"]
+visible = false
+mouse_filter = 2
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="MW" type="Button" parent="UI/MobilePad"]
+focus_mode = 0
+expand_icon = true
+anchor_top = 1.0
+anchor_bottom = 1.0
+offset_left = 120.0
+offset_top = -300.0
+offset_right = 208.0
+offset_bottom = -212.0
+icon = ExtResource("10")
+
+[node name="MA" type="Button" parent="UI/MobilePad"]
+focus_mode = 0
+expand_icon = true
+anchor_top = 1.0
+anchor_bottom = 1.0
+offset_left = 28.0
+offset_top = -204.0
+offset_right = 116.0
+offset_bottom = -116.0
+icon = ExtResource("11")
+
+[node name="MS" type="Button" parent="UI/MobilePad"]
+focus_mode = 0
+expand_icon = true
+anchor_top = 1.0
+anchor_bottom = 1.0
+offset_left = 120.0
+offset_top = -204.0
+offset_right = 208.0
+offset_bottom = -116.0
+icon = ExtResource("12")
+
+[node name="MD" type="Button" parent="UI/MobilePad"]
+focus_mode = 0
+expand_icon = true
+anchor_top = 1.0
+anchor_bottom = 1.0
+offset_left = 212.0
+offset_top = -204.0
+offset_right = 300.0
+offset_bottom = -116.0
+icon = ExtResource("13")
+
+[node name="MDrop" type="Button" parent="UI/MobilePad"]
+focus_mode = 0
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -236.0
+offset_top = -260.0
+offset_right = -24.0
+offset_bottom = -120.0
+theme_override_font_sizes/font_size = 40
+text = "낙하!"
+
+[node name="PauseButton" type="Button" parent="UI"]
+custom_minimum_size = Vector2(154, 48)
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -170.0
+offset_top = 10.0
+offset_right = -16.0
+offset_bottom = 58.0
+theme_override_font_sizes/font_size = 18
+text = "일시정지"
+
+[node name="PausePanel" type="PanelContainer" parent="UI"]
+process_mode = 3
+visible = false
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -180.0
+offset_top = -110.0
+offset_right = 180.0
+offset_bottom = 110.0
+
+[node name="VBox" type="VBoxContainer" parent="UI/PausePanel"]
+theme_override_constants/separation = 12
+
+[node name="PauseLabel" type="Label" parent="UI/PausePanel/VBox"]
+theme_override_font_sizes/font_size = 26
+text = "일시정지"
+horizontal_alignment = 1
+
+[node name="ContinueButton" type="Button" parent="UI/PausePanel/VBox"]
+custom_minimum_size = Vector2(300, 62)
+layout_mode = 2
+theme_override_font_sizes/font_size = 22
+text = "계속하기"
+
+[node name="MenuButton" type="Button" parent="UI/PausePanel/VBox"]
+custom_minimum_size = Vector2(300, 62)
+layout_mode = 2
+theme_override_font_sizes/font_size = 22
+text = "메인 메뉴"
+
+[node name="MsgPanel" type="PanelContainer" parent="UI"]
+visible = false
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -220.0
+offset_top = -70.0
+offset_right = 220.0
+offset_bottom = 70.0
+
+[node name="VBox" type="VBoxContainer" parent="UI/MsgPanel"]
+theme_override_constants/separation = 12
+
+[node name="MsgLabel" type="Label" parent="UI/MsgPanel/VBox"]
+theme_override_font_sizes/font_size = 22
+text = "..."
+horizontal_alignment = 1
+
+[node name="RestartButton" type="Button" parent="UI/MsgPanel/VBox"]
+custom_minimum_size = Vector2(320, 58)
+layout_mode = 2
+theme_override_font_sizes/font_size = 20
+text = "다시 시작 (R)"

@@ -1,0 +1,54 @@
+[gd_scene format=4 uid="uid://8dvanknwfp1q"]
+
+[ext_resource type="Script" path="res://scripts/charselect.gd" id="1"]
+[ext_resource type="AudioStream" path="res://assets/sfx/click.ogg" id="2"]
+
+[node name="CharSelect" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+script = ExtResource("1")
+
+[node name="Bg" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0.09, 0.1, 0.16, 1)
+
+[node name="Center" type="CenterContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="VBox" type="VBoxContainer" parent="Center"]
+layout_mode = 2
+theme_override_constants/separation = 14
+
+[node name="Title" type="Label" parent="Center/VBox"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 40
+text = "캐릭터 선택"
+horizontal_alignment = 1
+
+[node name="GridCenter" type="CenterContainer" parent="Center/VBox"]
+layout_mode = 2
+
+[node name="Grid" type="GridContainer" parent="Center/VBox/GridCenter"]
+layout_mode = 2
+theme_override_constants/h_separation = 14
+theme_override_constants/v_separation = 14
+columns = 3
+
+[node name="BackButton" type="Button" parent="Center/VBox"]
+custom_minimum_size = Vector2(200, 54)
+layout_mode = 2
+theme_override_font_sizes/font_size = 20
+text = "닫기"
+
+[node name="ClickPlayer" type="AudioStreamPlayer" parent="."]
+stream = ExtResource("2")
+bus = &"SFX"
+volume_db = -10.0

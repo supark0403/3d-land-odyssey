@@ -1,0 +1,14 @@
+# Godot
+.godot/
+exports/
+build/
+*.translation
+*.uid
+
+# 원본 에셋 창고 (용량 큼, 빌드 불필요)
+ASSET_ZIP/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+*.tmp

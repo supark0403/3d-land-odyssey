@@ -1,0 +1,241 @@
+[gd_scene format=4 uid="uid://buqtkypiuewx5"]
+
+[ext_resource type="Script" path="res://scripts/main_menu.gd" id="1"]
+[ext_resource type="AudioStream" path="res://assets/sfx/click.ogg" id="2"]
+
+[node name="MainMenu" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+script = ExtResource("1")
+
+[node name="Bg" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0.09, 0.1, 0.16, 1)
+
+[node name="Center" type="CenterContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="VBox" type="VBoxContainer" parent="Center"]
+layout_mode = 2
+theme_override_constants/separation = 14
+
+[node name="Title" type="Label" parent="Center/VBox"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 64
+text = "3D 미니게임"
+horizontal_alignment = 1
+
+[node name="Sub" type="Label" parent="Center/VBox"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 18
+text = "2048 · 수박 · 서바이버 · 플래피 · 슈팅 · 테트리스"
+horizontal_alignment = 1
+
+[node name="BestLabel" type="Label" parent="Center/VBox"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 22
+text = "최고 점수: 0"
+horizontal_alignment = 1
+
+[node name="StartButton" type="Button" parent="Center/VBox"]
+custom_minimum_size = Vector2(280, 78)
+layout_mode = 2
+theme_override_font_sizes/font_size = 26
+text = "게임 선택하기"
+
+[node name="SettingsButton" type="Button" parent="Center/VBox"]
+custom_minimum_size = Vector2(280, 78)
+layout_mode = 2
+theme_override_font_sizes/font_size = 26
+text = "설정"
+
+[node name="GameListPanel" type="PanelContainer" parent="."]
+visible = false
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -320.0
+offset_top = -200.0
+offset_right = 320.0
+offset_bottom = 200.0
+
+[node name="VBox" type="VBoxContainer" parent="GameListPanel"]
+theme_override_constants/separation = 14
+
+[node name="Title" type="Label" parent="GameListPanel/VBox"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 30
+text = "게임 선택"
+horizontal_alignment = 1
+
+[node name="GridCenter" type="CenterContainer" parent="GameListPanel/VBox"]
+layout_mode = 2
+
+[node name="Grid" type="GridContainer" parent="GameListPanel/VBox/GridCenter"]
+layout_mode = 2
+theme_override_constants/h_separation = 14
+theme_override_constants/v_separation = 14
+columns = 3
+
+[node name="GameBtn2048" type="Button" parent="GameListPanel/VBox/GridCenter/Grid"]
+custom_minimum_size = Vector2(180, 180)
+layout_mode = 2
+theme_override_font_sizes/font_size = 40
+text = "2048"
+
+[node name="GameBtnSuika" type="Button" parent="GameListPanel/VBox/GridCenter/Grid"]
+custom_minimum_size = Vector2(180, 180)
+layout_mode = 2
+theme_override_font_sizes/font_size = 40
+text = "수박"
+
+[node name="GameBtnSurv" type="Button" parent="GameListPanel/VBox/GridCenter/Grid"]
+custom_minimum_size = Vector2(180, 180)
+layout_mode = 2
+theme_override_font_sizes/font_size = 32
+text = "서바이버"
+
+[node name="GameBtnFlappy" type="Button" parent="GameListPanel/VBox/GridCenter/Grid"]
+custom_minimum_size = Vector2(180, 180)
+layout_mode = 2
+theme_override_font_sizes/font_size = 32
+text = "플래피"
+
+[node name="GameBtnTetris" type="Button" parent="GameListPanel/VBox/GridCenter/Grid"]
+custom_minimum_size = Vector2(180, 180)
+layout_mode = 2
+theme_override_font_sizes/font_size = 30
+text = "테트리스"
+
+[node name="GameBtnShmup" type="Button" parent="GameListPanel/VBox/GridCenter/Grid"]
+custom_minimum_size = Vector2(180, 180)
+layout_mode = 2
+theme_override_font_sizes/font_size = 32
+text = "슈팅"
+
+[node name="GameBtnBreakout" type="Button" parent="GameListPanel/VBox/GridCenter/Grid"]
+custom_minimum_size = Vector2(180, 180)
+layout_mode = 2
+theme_override_font_sizes/font_size = 28
+text = "블록깨기"
+
+[node name="GameBtnSnake" type="Button" parent="GameListPanel/VBox/GridCenter/Grid"]
+custom_minimum_size = Vector2(180, 180)
+layout_mode = 2
+theme_override_font_sizes/font_size = 32
+text = "지렁이"
+
+[node name="GameBtnMines" type="Button" parent="GameListPanel/VBox/GridCenter/Grid"]
+custom_minimum_size = Vector2(180, 180)
+layout_mode = 2
+theme_override_font_sizes/font_size = 28
+text = "지뢰찾기"
+
+[node name="ListBackButton" type="Button" parent="GameListPanel/VBox"]
+custom_minimum_size = Vector2(200, 54)
+layout_mode = 2
+theme_override_font_sizes/font_size = 20
+text = "닫기"
+
+[node name="SettingsPanel" type="PanelContainer" parent="."]
+visible = false
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -260.0
+offset_top = -160.0
+offset_right = 260.0
+offset_bottom = 160.0
+
+[node name="Margin" type="MarginContainer" parent="SettingsPanel"]
+layout_mode = 2
+theme_override_constants/margin_left = 30
+theme_override_constants/margin_right = 30
+theme_override_constants/margin_top = 20
+theme_override_constants/margin_bottom = 20
+
+[node name="VBox" type="VBoxContainer" parent="SettingsPanel/Margin"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="Title" type="Label" parent="SettingsPanel/Margin/VBox"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 26
+text = "설정"
+horizontal_alignment = 1
+
+[node name="MasterRow" type="HBoxContainer" parent="SettingsPanel/Margin/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="MasterLabel" type="Label" parent="SettingsPanel/Margin/VBox/MasterRow"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 18
+text = "전체 음량"
+
+[node name="MasterSlider" type="HSlider" parent="SettingsPanel/Margin/VBox/MasterRow"]
+custom_minimum_size = Vector2(160, 0)
+layout_mode = 2
+size_flags_horizontal = 3
+max_value = 100.0
+step = 1.0
+value = 100.0
+
+[node name="MasterValue" type="Label" parent="SettingsPanel/Margin/VBox/MasterRow"]
+custom_minimum_size = Vector2(56, 0)
+layout_mode = 2
+theme_override_font_sizes/font_size = 18
+text = "100"
+horizontal_alignment = 2
+
+[node name="SfxRow" type="HBoxContainer" parent="SettingsPanel/Margin/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="SfxLabel" type="Label" parent="SettingsPanel/Margin/VBox/SfxRow"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 18
+text = "효과음"
+
+[node name="SfxSlider" type="HSlider" parent="SettingsPanel/Margin/VBox/SfxRow"]
+custom_minimum_size = Vector2(160, 0)
+layout_mode = 2
+size_flags_horizontal = 3
+max_value = 100.0
+step = 1.0
+value = 100.0
+
+[node name="SfxValue" type="Label" parent="SettingsPanel/Margin/VBox/SfxRow"]
+custom_minimum_size = Vector2(56, 0)
+layout_mode = 2
+theme_override_font_sizes/font_size = 18
+text = "100"
+horizontal_alignment = 2
+
+[node name="BackButton" type="Button" parent="SettingsPanel/Margin/VBox"]
+custom_minimum_size = Vector2(200, 54)
+layout_mode = 2
+theme_override_font_sizes/font_size = 20
+text = "닫기"
+
+[node name="MobileCheck" type="CheckButton" parent="SettingsPanel/Margin/VBox"]
+custom_minimum_size = Vector2(0, 54)
+layout_mode = 2
+alignment = 1
+theme_override_font_sizes/font_size = 20
+text = "모바일 모드"
+
+[node name="ClickPlayer" type="AudioStreamPlayer" parent="."]
+stream = ExtResource("2")
+bus = &"SFX"
+volume_db = -10.0
