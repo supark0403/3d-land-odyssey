@@ -1,5 +1,6 @@
-[gd_resource type="Theme" load_steps=139 format=3 uid="uid://b826k6lvqtor5"]
+[gd_resource type="Theme" load_steps=141 format=3 uid="uid://b826k6lvqtor5"]
 
+[ext_resource type="Font" path="res://assets/fonts/ui_font.tres" id="1_uifont"]
 [ext_resource type="Texture2D" path="res://GuiAssets/styles/checks/checked_7px.tres" id="2_4j11b"]
 [ext_resource type="StyleBox" path="res://GuiAssets/styles/containers/square/focus_square.tres" id="2_y56dm"]
 [ext_resource type="StyleBox" path="res://GuiAssets/styles/containers/square/slim_panel_square.tres" id="3_1eoli"]
@@ -2836,7 +2837,7 @@ margin_bottom = 2.0
 region_rect = Rect2(48, 198, 6, 7)
 
 [resource]
-default_font = ExtResource("7_gc3a0")
+default_font = ExtResource("1_uifont")
 default_font_size = 6
 Button/font_sizes/font_size = 6
 Button/styles/disabled = SubResource("StyleBoxTexture_dyv63")
