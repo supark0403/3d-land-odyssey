@@ -13,6 +13,8 @@ const CHARS := {
 }
 const ORDER := ["knight", "barbarian", "ranger", "mage", "rogue"]
 
+const PLAY_LIMIT := 53.5 # 시각 바닥(±55) 안쪽 이동 한계
+
 # kind: melee=범위 타격 / proj=투사체
 const WEAPONS := {
 	"sword": {"label": "칼", "kind": "melee", "dmg": 14.0, "cd": 0.55, "range": 2.6, "arc": 100.0, "count": 1, "pierce": 0, "pspeed": 0.0, "clip": "combat/Melee_1H_Attack_Slice_Horizontal", "item": "res://assets/surv/weapons/sword_1handed.gltf", "rot": Vector3.ZERO},
@@ -28,6 +30,8 @@ const ENEMIES := {
 	"warrior": {"file": "res://assets/surv/enemies/Skeleton_Warrior.glb", "hp": 55.0, "speed": 2.4, "dmg": 16.0, "xp": 3, "r": 0.65, "scl": 1.1},
 	"mage": {"file": "res://assets/surv/enemies/Skeleton_Mage.glb", "hp": 26.0, "speed": 2.8, "dmg": 6.0, "xp": 2, "r": 0.55, "scl": 1.0},
 	"boss1": {"file": "res://assets/surv/enemies/Skeleton_Warrior.glb", "hp": 150.0, "speed": 2.6, "dmg": 18.0, "xp": 12, "r": 1.0, "scl": 1.5, "tint": Color(1.0, 0.45, 0.4)},
+	"gunship": {"file": "res://assets/surv/enemies/Skeleton_Warrior.glb", "hp": 70.0, "speed": 2.2, "dmg": 14.0, "xp": 3, "r": 0.7, "scl": 1.25, "tint": Color(0.55, 0.65, 0.8)},
+	"shooter": {"file": "res://assets/surv/enemies/Skeleton_Rogue.glb", "hp": 14.0, "speed": 4.6, "dmg": 7.0, "xp": 2, "r": 0.5, "scl": 1.0, "tint": Color(0.5, 0.85, 0.5)},
 	"boss2": {"file": "res://assets/surv/enemies/Skeleton_Mage.glb", "hp": 260.0, "speed": 2.4, "dmg": 22.0, "xp": 20, "r": 1.1, "scl": 1.7, "tint": Color(1.0, 0.65, 0.3)},
 	"boss3": {"file": "res://assets/surv/enemies/Skeleton_Warrior.glb", "hp": 420.0, "speed": 2.6, "dmg": 26.0, "xp": 30, "r": 1.3, "scl": 2.0, "tint": Color(0.75, 0.5, 1.0)},
 }

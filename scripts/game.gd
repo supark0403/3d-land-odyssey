@@ -82,17 +82,21 @@ func _unhandled_key_input(event: InputEvent) -> void:
 	var k := event as InputEventKey
 	if not k.pressed or k.echo:
 		return
-	if k.physical_keycode == KEY_R:
+	var code := int(k.physical_keycode)
+	if code in Controls.keys_for("global", "restart"):
 		restart()
 		return
-	if k.physical_keycode == KEY_P:
+	if code in Controls.keys_for("global", "pause"):
 		if get_tree().paused:
 			resume_game()
 		else:
 			pause_game()
 		return
-	if KEY_DIRS.has(k.physical_keycode):
-		_do_move(KEY_DIRS[k.physical_keycode])
+	var dirs := {"up": Vector3i(0, 1, 0), "down": Vector3i(0, -1, 0), "left": Vector3i(-1, 0, 0), "right": Vector3i(1, 0, 0), "front": Vector3i(0, 0, -1), "back": Vector3i(0, 0, 1)}
+	for a in dirs.keys():
+		if code in Controls.keys_for("g2048", str(a)):
+			_do_move(dirs[a])
+			return
 
 func pause_game() -> void:
 	if over:

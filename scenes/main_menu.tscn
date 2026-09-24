@@ -30,32 +30,32 @@ theme_override_constants/separation = 14
 [node name="Title" type="Label" parent="Center/VBox"]
 layout_mode = 2
 theme_override_font_sizes/font_size = 64
-text = "3D 미니게임"
+text = "3D Mini Games"
 horizontal_alignment = 1
 
 [node name="Sub" type="Label" parent="Center/VBox"]
 layout_mode = 2
 theme_override_font_sizes/font_size = 18
-text = "2048 · 수박 · 서바이버 · 플래피 · 슈팅 · 테트리스"
-horizontal_alignment = 1
-
-[node name="BestLabel" type="Label" parent="Center/VBox"]
-layout_mode = 2
-theme_override_font_sizes/font_size = 22
-text = "최고 점수: 0"
+text = "2048 · Suika · Survivor · Flight · Tetris · Shooter · Breakout · Snake · Minesweeper · Stack"
 horizontal_alignment = 1
 
 [node name="StartButton" type="Button" parent="Center/VBox"]
 custom_minimum_size = Vector2(280, 78)
 layout_mode = 2
 theme_override_font_sizes/font_size = 26
-text = "게임 선택하기"
+text = "Game"
 
 [node name="SettingsButton" type="Button" parent="Center/VBox"]
 custom_minimum_size = Vector2(280, 78)
 layout_mode = 2
 theme_override_font_sizes/font_size = 26
-text = "설정"
+text = "Setting"
+
+[node name="ScoreButton" type="Button" parent="Center/VBox"]
+custom_minimum_size = Vector2(280, 78)
+layout_mode = 2
+theme_override_font_sizes/font_size = 26
+text = "Score"
 
 [node name="GameListPanel" type="PanelContainer" parent="."]
 visible = false
@@ -63,84 +63,41 @@ anchor_left = 0.5
 anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
-offset_left = -320.0
-offset_top = -200.0
-offset_right = 320.0
-offset_bottom = 200.0
+offset_left = 0.0
+offset_top = 0.0
+offset_right = 0.0
+offset_bottom = 0.0
+grow_horizontal = 2
+grow_vertical = 2
 
-[node name="VBox" type="VBoxContainer" parent="GameListPanel"]
+[node name="Margin" type="MarginContainer" parent="GameListPanel"]
+layout_mode = 2
+theme_override_constants/margin_left = 28
+theme_override_constants/margin_right = 28
+theme_override_constants/margin_top = 22
+theme_override_constants/margin_bottom = 22
+
+[node name="VBox" type="VBoxContainer" parent="GameListPanel/Margin"]
+layout_mode = 2
 theme_override_constants/separation = 14
 
-[node name="Title" type="Label" parent="GameListPanel/VBox"]
+[node name="Scroll" type="ScrollContainer" parent="GameListPanel/Margin/VBox"]
+custom_minimum_size = Vector2(620, 460)
 layout_mode = 2
-theme_override_font_sizes/font_size = 30
-text = "게임 선택"
-horizontal_alignment = 1
+size_flags_vertical = 3
+horizontal_scroll_mode = 0
 
-[node name="GridCenter" type="CenterContainer" parent="GameListPanel/VBox"]
+[node name="GridCenter" type="CenterContainer" parent="GameListPanel/Margin/VBox/Scroll"]
 layout_mode = 2
+size_flags_horizontal = 3
 
-[node name="Grid" type="GridContainer" parent="GameListPanel/VBox/GridCenter"]
+[node name="Grid" type="GridContainer" parent="GameListPanel/Margin/VBox/Scroll/GridCenter"]
 layout_mode = 2
 theme_override_constants/h_separation = 14
 theme_override_constants/v_separation = 14
 columns = 3
 
-[node name="GameBtn2048" type="Button" parent="GameListPanel/VBox/GridCenter/Grid"]
-custom_minimum_size = Vector2(180, 180)
-layout_mode = 2
-theme_override_font_sizes/font_size = 40
-text = "2048"
-
-[node name="GameBtnSuika" type="Button" parent="GameListPanel/VBox/GridCenter/Grid"]
-custom_minimum_size = Vector2(180, 180)
-layout_mode = 2
-theme_override_font_sizes/font_size = 40
-text = "수박"
-
-[node name="GameBtnSurv" type="Button" parent="GameListPanel/VBox/GridCenter/Grid"]
-custom_minimum_size = Vector2(180, 180)
-layout_mode = 2
-theme_override_font_sizes/font_size = 32
-text = "서바이버"
-
-[node name="GameBtnFlappy" type="Button" parent="GameListPanel/VBox/GridCenter/Grid"]
-custom_minimum_size = Vector2(180, 180)
-layout_mode = 2
-theme_override_font_sizes/font_size = 32
-text = "플래피"
-
-[node name="GameBtnTetris" type="Button" parent="GameListPanel/VBox/GridCenter/Grid"]
-custom_minimum_size = Vector2(180, 180)
-layout_mode = 2
-theme_override_font_sizes/font_size = 30
-text = "테트리스"
-
-[node name="GameBtnShmup" type="Button" parent="GameListPanel/VBox/GridCenter/Grid"]
-custom_minimum_size = Vector2(180, 180)
-layout_mode = 2
-theme_override_font_sizes/font_size = 32
-text = "슈팅"
-
-[node name="GameBtnBreakout" type="Button" parent="GameListPanel/VBox/GridCenter/Grid"]
-custom_minimum_size = Vector2(180, 180)
-layout_mode = 2
-theme_override_font_sizes/font_size = 28
-text = "블록깨기"
-
-[node name="GameBtnSnake" type="Button" parent="GameListPanel/VBox/GridCenter/Grid"]
-custom_minimum_size = Vector2(180, 180)
-layout_mode = 2
-theme_override_font_sizes/font_size = 32
-text = "지렁이"
-
-[node name="GameBtnMines" type="Button" parent="GameListPanel/VBox/GridCenter/Grid"]
-custom_minimum_size = Vector2(180, 180)
-layout_mode = 2
-theme_override_font_sizes/font_size = 28
-text = "지뢰찾기"
-
-[node name="ListBackButton" type="Button" parent="GameListPanel/VBox"]
+[node name="ListBackButton" type="Button" parent="GameListPanel/Margin/VBox"]
 custom_minimum_size = Vector2(200, 54)
 layout_mode = 2
 theme_override_font_sizes/font_size = 20
@@ -166,7 +123,7 @@ theme_override_constants/margin_bottom = 20
 
 [node name="VBox" type="VBoxContainer" parent="SettingsPanel/Margin"]
 layout_mode = 2
-theme_override_constants/separation = 12
+theme_override_constants/separation = 6
 
 [node name="Title" type="Label" parent="SettingsPanel/Margin/VBox"]
 layout_mode = 2
@@ -179,9 +136,11 @@ layout_mode = 2
 theme_override_constants/separation = 8
 
 [node name="MasterLabel" type="Label" parent="SettingsPanel/Margin/VBox/MasterRow"]
+custom_minimum_size = Vector2(90, 0)
 layout_mode = 2
 theme_override_font_sizes/font_size = 18
 text = "전체 음량"
+horizontal_alignment = 1
 
 [node name="MasterSlider" type="HSlider" parent="SettingsPanel/Margin/VBox/MasterRow"]
 custom_minimum_size = Vector2(160, 0)
@@ -203,9 +162,11 @@ layout_mode = 2
 theme_override_constants/separation = 8
 
 [node name="SfxLabel" type="Label" parent="SettingsPanel/Margin/VBox/SfxRow"]
+custom_minimum_size = Vector2(90, 0)
 layout_mode = 2
 theme_override_font_sizes/font_size = 18
 text = "효과음"
+horizontal_alignment = 1
 
 [node name="SfxSlider" type="HSlider" parent="SettingsPanel/Margin/VBox/SfxRow"]
 custom_minimum_size = Vector2(160, 0)
@@ -222,20 +183,106 @@ theme_override_font_sizes/font_size = 18
 text = "100"
 horizontal_alignment = 2
 
+[node name="KeyButton" type="Button" parent="SettingsPanel/Margin/VBox"]
+custom_minimum_size = Vector2(200, 54)
+layout_mode = 2
+theme_override_font_sizes/font_size = 20
+text = "키 설정"
+
+[node name="MobileCheck" type="Button" parent="SettingsPanel/Margin/VBox"]
+custom_minimum_size = Vector2(0, 54)
+layout_mode = 2
+theme_override_font_sizes/font_size = 20
+text = "모바일 모드"
+toggle_mode = true
+
 [node name="BackButton" type="Button" parent="SettingsPanel/Margin/VBox"]
 custom_minimum_size = Vector2(200, 54)
 layout_mode = 2
 theme_override_font_sizes/font_size = 20
 text = "닫기"
 
-[node name="MobileCheck" type="CheckButton" parent="SettingsPanel/Margin/VBox"]
-custom_minimum_size = Vector2(0, 54)
-layout_mode = 2
-alignment = 1
-theme_override_font_sizes/font_size = 20
-text = "모바일 모드"
-
 [node name="ClickPlayer" type="AudioStreamPlayer" parent="."]
 stream = ExtResource("2")
 bus = &"SFX"
 volume_db = -10.0
+
+[node name="KeyPanel" type="PanelContainer" parent="."]
+visible = false
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = 0.0
+offset_top = 0.0
+offset_right = 0.0
+offset_bottom = 0.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Margin" type="MarginContainer" parent="KeyPanel"]
+layout_mode = 2
+theme_override_constants/margin_left = 36
+theme_override_constants/margin_right = 36
+theme_override_constants/margin_top = 28
+theme_override_constants/margin_bottom = 28
+
+[node name="VBox" type="VBoxContainer" parent="KeyPanel/Margin"]
+theme_override_constants/separation = 10
+
+[node name="Scroll" type="ScrollContainer" parent="KeyPanel/Margin/VBox"]
+custom_minimum_size = Vector2(460, 430)
+layout_mode = 2
+size_flags_vertical = 3
+horizontal_scroll_mode = 0
+
+[node name="KeyVBox" type="VBoxContainer" parent="KeyPanel/Margin/VBox/Scroll"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 6
+
+[node name="KeyBackButton" type="Button" parent="KeyPanel/Margin/VBox"]
+custom_minimum_size = Vector2(200, 54)
+layout_mode = 2
+theme_override_font_sizes/font_size = 20
+text = "닫기"
+
+[node name="ScorePanel" type="PanelContainer" parent="."]
+visible = false
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = 0.0
+offset_top = 0.0
+offset_right = 0.0
+offset_bottom = 0.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Margin" type="MarginContainer" parent="ScorePanel"]
+layout_mode = 2
+theme_override_constants/margin_left = 32
+theme_override_constants/margin_right = 32
+theme_override_constants/margin_top = 24
+theme_override_constants/margin_bottom = 24
+
+[node name="VBox" type="VBoxContainer" parent="ScorePanel/Margin"]
+theme_override_constants/separation = 10
+
+[node name="Scroll" type="ScrollContainer" parent="ScorePanel/Margin/VBox"]
+custom_minimum_size = Vector2(440, 380)
+layout_mode = 2
+size_flags_vertical = 3
+horizontal_scroll_mode = 0
+
+[node name="ScoreVBox" type="VBoxContainer" parent="ScorePanel/Margin/VBox/Scroll"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 6
+
+[node name="ScoreBackButton" type="Button" parent="ScorePanel/Margin/VBox"]
+custom_minimum_size = Vector2(200, 54)
+layout_mode = 2
+theme_override_font_sizes/font_size = 20
+text = "닫기"

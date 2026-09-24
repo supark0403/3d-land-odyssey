@@ -1,17 +1,10 @@
-[gd_scene format=4 uid="uid://c2048snake01"]
+[gd_scene format=4 uid="uid://c2048stack01"]
 
-[ext_resource type="Script" path="res://scripts/snake.gd" id="1"]
-[ext_resource type="Script" path="res://scripts/virtual_stick.gd" id="30"]
-[ext_resource type="AudioStream" path="res://assets/sfx/success.ogg" id="2"]
-[ext_resource type="AudioStream" path="res://assets/sfx/achieve.ogg" id="3"]
+[ext_resource type="Script" path="res://scripts/stack.gd" id="1"]
+[ext_resource type="AudioStream" path="res://assets/sfx/click.ogg" id="2"]
+[ext_resource type="AudioStream" path="res://assets/sfx/drop.ogg" id="3"]
 [ext_resource type="AudioStream" path="res://assets/sfx/error.ogg" id="4"]
-[ext_resource type="AudioStream" path="res://assets/sfx/click.ogg" id="5"]
-[ext_resource type="Texture2D" path="res://assets/ui/key_w.png" id="10"]
-[ext_resource type="Texture2D" path="res://assets/ui/key_a.png" id="11"]
-[ext_resource type="Texture2D" path="res://assets/ui/key_s.png" id="12"]
-[ext_resource type="Texture2D" path="res://assets/ui/key_d.png" id="13"]
-[ext_resource type="Texture2D" path="res://assets/pxui/icon_arrow_up.png" id="14"]
-[ext_resource type="Texture2D" path="res://assets/pxui/icon_arrow_down.png" id="15"]
+[ext_resource type="AudioStream" path="res://assets/sfx/success.ogg" id="5"]
 
 [sub_resource type="Environment" id="Env_1"]
 background_mode = 1
@@ -21,7 +14,7 @@ ambient_light_color = Color(0.7, 0.75, 0.9, 1)
 ambient_light_energy = 0.35
 tonemap_mode = 2
 
-[node name="Snake" type="Node3D"]
+[node name="Stack" type="Node3D"]
 process_mode = 3
 script = ExtResource("1")
 
@@ -34,28 +27,26 @@ light_energy = 0.4
 shadow_enabled = true
 
 [node name="Camera3D" type="Camera3D" parent="."]
-position = Vector3(0, 16, 10)
-rotation = Vector3(-1.012, 0, 0)
-fov = 50.0
+fov = 60.0
 current = true
 
-[node name="SfxEat" type="AudioStreamPlayer" parent="."]
-stream = ExtResource("2")
+[node name="SfxPlace" type="AudioStreamPlayer" parent="."]
+stream = ExtResource("3")
 volume_db = -10.0
 bus = &"SFX"
 
-[node name="SfxGold" type="AudioStreamPlayer" parent="."]
-stream = ExtResource("3")
+[node name="SfxPerfect" type="AudioStreamPlayer" parent="."]
+stream = ExtResource("5")
 volume_db = -8.0
 bus = &"SFX"
 
 [node name="SfxOver" type="AudioStreamPlayer" parent="."]
 stream = ExtResource("4")
-volume_db = -10.0
+volume_db = -8.0
 bus = &"SFX"
 
 [node name="SfxRestart" type="AudioStreamPlayer" parent="."]
-stream = ExtResource("5")
+stream = ExtResource("2")
 volume_db = -12.0
 bus = &"SFX"
 
@@ -67,7 +58,7 @@ offset_top = 12.0
 offset_right = 300.0
 offset_bottom = 44.0
 theme_override_font_sizes/font_size = 28
-text = "점수: 0"
+text = "0층"
 
 [node name="BestLabel" type="Label" parent="UI"]
 offset_left = 16.0
@@ -75,15 +66,20 @@ offset_top = 48.0
 offset_right = 300.0
 offset_bottom = 76.0
 theme_override_font_sizes/font_size = 20
-text = "최고: 0"
+text = "최고: 0층"
 
-[node name="LenLabel" type="Label" parent="UI"]
-offset_left = 16.0
-offset_top = 80.0
+[node name="ComboLabel" type="Label" parent="UI"]
+visible = false
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -200.0
+offset_top = 90.0
 offset_right = 200.0
-offset_bottom = 108.0
-theme_override_font_sizes/font_size = 20
-text = "3칸"
+offset_bottom = 122.0
+theme_override_font_sizes/font_size = 24
+theme_override_colors/font_color = Color(1, 0.85, 0.3, 1)
+text = "PERFECT"
+horizontal_alignment = 1
 
 [node name="HelpLabel" type="Label" parent="UI"]
 anchor_left = 0.0
@@ -95,7 +91,7 @@ offset_top = -34.0
 offset_right = -16.0
 offset_bottom = -10.0
 theme_override_font_sizes/font_size = 15
-text = "WASD/방향키 수평 · 스페이스 위 · C 아래 · P 일시정지 · R 재시작"
+text = "스페이스/클릭으로 쌓기 · P 일시정지 · R 재시작 · 삐져나온 부분은 잘려나감"
 horizontal_alignment = 1
 
 [node name="PauseButton" type="Button" parent="UI"]
@@ -173,38 +169,15 @@ mouse_filter = 2
 anchor_right = 1.0
 anchor_bottom = 1.0
 
-[node name="Stick" type="Control" parent="UI/MobilePad"]
-custom_minimum_size = Vector2(220, 220)
-anchor_top = 1.0
-anchor_bottom = 1.0
-offset_left = 24.0
-offset_top = -244.0
-offset_right = 244.0
-offset_bottom = -24.0
-script = ExtResource("30")
-
-[node name="MUp" type="Button" parent="UI/MobilePad"]
+[node name="MDrop" type="Button" parent="UI/MobilePad"]
 focus_mode = 0
-expand_icon = true
 anchor_left = 1.0
 anchor_top = 1.0
 anchor_right = 1.0
 anchor_bottom = 1.0
 offset_left = -236.0
-offset_top = -300.0
-offset_right = -148.0
-offset_bottom = -212.0
-icon = ExtResource("14")
-
-[node name="MDown" type="Button" parent="UI/MobilePad"]
-focus_mode = 0
-expand_icon = true
-anchor_left = 1.0
-anchor_top = 1.0
-anchor_right = 1.0
-anchor_bottom = 1.0
-offset_left = -140.0
-offset_top = -300.0
-offset_right = -52.0
-offset_bottom = -212.0
-icon = ExtResource("15")
+offset_top = -260.0
+offset_right = -24.0
+offset_bottom = -120.0
+theme_override_font_sizes/font_size = 40
+text = "쌓기!"

@@ -120,16 +120,8 @@ func take_hit(raw: float) -> bool:
 	return hp <= 0.0
 
 func _move_axis() -> Vector2:
-	var x := 0.0
-	var y := 0.0
-	if Input.is_physical_key_pressed(KEY_D) or Input.is_physical_key_pressed(KEY_RIGHT):
-		x += 1.0
-	if Input.is_physical_key_pressed(KEY_A) or Input.is_physical_key_pressed(KEY_LEFT):
-		x -= 1.0
-	if Input.is_physical_key_pressed(KEY_S) or Input.is_physical_key_pressed(KEY_DOWN):
-		y += 1.0
-	if Input.is_physical_key_pressed(KEY_W) or Input.is_physical_key_pressed(KEY_UP):
-		y -= 1.0
+	var x := Controls.axis_pressed("surv", "left", "right")
+	var y := Controls.axis_pressed("surv", "up", "down")
 	return Vector2(clampf(x + touch_dir.x, -1.0, 1.0), clampf(y + touch_dir.y, -1.0, 1.0))
 
 func update_alive(delta: float, game: Node) -> void:
@@ -148,8 +140,8 @@ func update_alive(delta: float, game: Node) -> void:
 	if dir.length() > 1.0:
 		dir = dir.normalized()
 	global_position += dir * speed * delta
-	global_position.x = clampf(global_position.x, -50.0, 50.0)
-	global_position.z = clampf(global_position.z, -50.0, 50.0)
+	global_position.x = clampf(global_position.x, -SurvivorSetup.PLAY_LIMIT, SurvivorSetup.PLAY_LIMIT)
+	global_position.z = clampf(global_position.z, -SurvivorSetup.PLAY_LIMIT, SurvivorSetup.PLAY_LIMIT)
 	var hspeed := dir.length() * speed
 	if hspeed > 0.5:
 		model.rotation.y = lerp_angle(model.rotation.y, atan2(dir.x, dir.z), 1.0 - exp(-12.0 * delta))

@@ -418,33 +418,39 @@ func _unhandled_key_input(event: InputEvent) -> void:
 	var k := event as InputEventKey
 	if not k.pressed or k.echo:
 		return
-	match k.physical_keycode:
-		KEY_SPACE:
-			hard_drop()
-		KEY_C, KEY_SHIFT:
-			hold_piece()
-		KEY_Q:
-			try_rotate("yaw+")
-		KEY_E:
-			try_rotate("yaw-")
-		KEY_W:
-			try_rotate("pitch-")
-		KEY_S:
-			try_rotate("pitch+")
-		KEY_A:
-			try_rotate("roll+")
-		KEY_D:
-			try_rotate("roll-")
-		KEY_R:
-			restart()
-		KEY_P:
-			if get_tree().paused:
-				resume_game()
-			else:
-				pause_game()
-		KEY_UP, KEY_DOWN, KEY_LEFT, KEY_RIGHT:
-			var b := _cam_snapped() * (Vector3(0, 0, -1) if k.physical_keycode == KEY_UP else (Vector3(0, 0, 1) if k.physical_keycode == KEY_DOWN else (Vector3(-1, 0, 0) if k.physical_keycode == KEY_LEFT else Vector3(1, 0, 0))))
-			try_move(int(roundf(b.x)), int(roundf(b.z)))
+	var code := int(k.physical_keycode)
+	if code in Controls.keys_for("tetris", "drop"):
+		hard_drop()
+		return
+	if code in Controls.keys_for("tetris", "hold"):
+		hold_piece()
+		return
+	if code in Controls.keys_for("global", "restart"):
+		restart()
+		return
+	if code in Controls.keys_for("global", "pause"):
+		if get_tree().paused:
+			resume_game()
+		else:
+			pause_game()
+		return
+	for r in [["yawp", "yaw+"], ["yawm", "yaw-"], ["pitchp", "pitch-"], ["pitchm", "pitch+"], ["rollp", "roll+"], ["rollm", "roll-"]]:
+		if code in Controls.keys_for("tetris", str(r[0])):
+			try_rotate(str(r[1]))
+			return
+	var mv := Vector3.ZERO
+	if code in Controls.keys_for("tetris", "up"):
+		mv = Vector3(0, 0, -1)
+	elif code in Controls.keys_for("tetris", "down"):
+		mv = Vector3(0, 0, 1)
+	elif code in Controls.keys_for("tetris", "left"):
+		mv = Vector3(-1, 0, 0)
+	elif code in Controls.keys_for("tetris", "right"):
+		mv = Vector3(1, 0, 0)
+	else:
+		return
+	var b := _cam_snapped() * mv
+	try_move(int(roundf(b.x)), int(roundf(b.z)))
 
 func _wire_mobile() -> void:
 	var moves := {"MUp": [0, -1], "MDown": [0, 1], "MLeft": [-1, 0], "MRight": [1, 0]}

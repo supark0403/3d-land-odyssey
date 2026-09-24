@@ -1,9 +1,15 @@
 [gd_scene format=4 uid="uid://c2048flappy01"]
 
 [ext_resource type="Script" path="res://scripts/flappy.gd" id="1"]
+[ext_resource type="Script" path="res://scripts/virtual_stick.gd" id="30"]
 [ext_resource type="AudioStream" path="res://assets/sfx/click.ogg" id="2"]
 [ext_resource type="AudioStream" path="res://assets/sfx/success.ogg" id="3"]
 [ext_resource type="AudioStream" path="res://assets/sfx/error.ogg" id="4"]
+[ext_resource type="AudioStream" path="res://assets/sfx/achieve.ogg" id="6"]
+[ext_resource type="Texture2D" path="res://assets/ui/key_w.png" id="20"]
+[ext_resource type="Texture2D" path="res://assets/ui/key_a.png" id="21"]
+[ext_resource type="Texture2D" path="res://assets/ui/key_s.png" id="22"]
+[ext_resource type="Texture2D" path="res://assets/ui/key_d.png" id="23"]
 [ext_resource type="Texture2D" path="res://assets/pxui/icon_arrow_left.png" id="11"]
 [ext_resource type="Texture2D" path="res://assets/pxui/icon_arrow_right.png" id="12"]
 [ext_resource type="Texture2D" path="res://assets/pxui/icon_arrow_up.png" id="13"]
@@ -32,18 +38,13 @@ shadow_enabled = true
 fov = 60.0
 current = true
 
-[node name="SfxFlap" type="AudioStreamPlayer" parent="."]
-stream = ExtResource("2")
-volume_db = -14.0
-bus = &"SFX"
-
-[node name="SfxScore" type="AudioStreamPlayer" parent="."]
+[node name="SfxRing" type="AudioStreamPlayer" parent="."]
 stream = ExtResource("3")
 volume_db = -10.0
 bus = &"SFX"
 
-[node name="SfxCrash" type="AudioStreamPlayer" parent="."]
-stream = ExtResource("4")
+[node name="SfxClear" type="AudioStreamPlayer" parent="."]
+stream = ExtResource("6")
 volume_db = -8.0
 bus = &"SFX"
 
@@ -54,15 +55,24 @@ bus = &"SFX"
 
 [node name="UI" type="CanvasLayer" parent="."]
 
-[node name="ScoreDigits" type="HBoxContainer" parent="UI"]
-anchor_left = 0.5
-anchor_right = 0.5
-offset_left = -150.0
-offset_top = 10.0
-offset_right = 150.0
-offset_bottom = 82.0
-theme_override_constants/separation = 4
-alignment = 1
+[node name="ScoreLabel" type="Label" parent="UI"]
+offset_left = 16.0
+offset_top = 12.0
+offset_right = 300.0
+offset_bottom = 44.0
+theme_override_font_sizes/font_size = 28
+text = "0/30"
+
+[node name="TimerLabel" type="Label" parent="UI"]
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -296.0
+offset_top = 12.0
+offset_right = -96.0
+offset_bottom = 44.0
+theme_override_font_sizes/font_size = 28
+text = "0.0초"
+horizontal_alignment = 2
 
 [node name="BestLabel" type="Label" parent="UI"]
 offset_left = 16.0
@@ -82,7 +92,7 @@ offset_top = -34.0
 offset_right = -16.0
 offset_bottom = -10.0
 theme_override_font_sizes/font_size = 15
-text = "스페이스 상승 · A/D 좌우 · P 일시정지 · R 재시작"
+text = "WASD 상하좌우 · P 일시정지 · R 재시작 · 노란 공 30개 목표"
 horizontal_alignment = 1
 
 [node name="PauseButton" type="Button" parent="UI"]
@@ -152,7 +162,7 @@ horizontal_alignment = 1
 custom_minimum_size = Vector2(320, 58)
 layout_mode = 2
 theme_override_font_sizes/font_size = 20
-text = "다시 시작 (R)"
+text = "다시 시작"
 
 [node name="MobilePad" type="Control" parent="UI"]
 visible = false
@@ -160,37 +170,12 @@ mouse_filter = 2
 anchor_right = 1.0
 anchor_bottom = 1.0
 
-[node name="MLeft" type="Button" parent="UI/MobilePad"]
-focus_mode = 0
-expand_icon = true
+[node name="Stick" type="Control" parent="UI/MobilePad"]
+custom_minimum_size = Vector2(220, 220)
 anchor_top = 1.0
 anchor_bottom = 1.0
-offset_left = 28.0
-offset_top = -204.0
-offset_right = 116.0
-offset_bottom = -116.0
-icon = ExtResource("11")
-
-[node name="MRight" type="Button" parent="UI/MobilePad"]
-focus_mode = 0
-expand_icon = true
-anchor_top = 1.0
-anchor_bottom = 1.0
-offset_left = 120.0
-offset_top = -204.0
-offset_right = 208.0
-offset_bottom = -116.0
-icon = ExtResource("12")
-
-[node name="MFlap" type="Button" parent="UI/MobilePad"]
-focus_mode = 0
-expand_icon = true
-anchor_left = 1.0
-anchor_top = 1.0
-anchor_right = 1.0
-anchor_bottom = 1.0
-offset_left = -236.0
-offset_top = -260.0
-offset_right = -24.0
-offset_bottom = -120.0
-icon = ExtResource("13")
+offset_left = 24.0
+offset_top = -244.0
+offset_right = 244.0
+offset_bottom = -24.0
+script = ExtResource("30")

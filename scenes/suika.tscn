@@ -1,6 +1,7 @@
 [gd_scene format=4 uid="uid://c2048suika01"]
 
 [ext_resource type="Script" path="res://scripts/suika.gd" id="1"]
+[ext_resource type="Script" path="res://scripts/virtual_stick.gd" id="30"]
 [ext_resource type="Script" path="res://scripts/camera_rig.gd" id="14"]
 [ext_resource type="AudioStream" path="res://assets/sfx/drop.ogg" id="2"]
 [ext_resource type="AudioStream" path="res://assets/sfx/success.ogg" id="3"]
@@ -123,49 +124,15 @@ mouse_filter = 2
 anchor_right = 1.0
 anchor_bottom = 1.0
 
-[node name="MW" type="Button" parent="UI/MobilePad"]
-focus_mode = 0
-expand_icon = true
+[node name="Stick" type="Control" parent="UI/MobilePad"]
+custom_minimum_size = Vector2(220, 220)
 anchor_top = 1.0
 anchor_bottom = 1.0
-offset_left = 120.0
-offset_top = -300.0
-offset_right = 208.0
-offset_bottom = -212.0
-icon = ExtResource("10")
-
-[node name="MA" type="Button" parent="UI/MobilePad"]
-focus_mode = 0
-expand_icon = true
-anchor_top = 1.0
-anchor_bottom = 1.0
-offset_left = 28.0
-offset_top = -204.0
-offset_right = 116.0
-offset_bottom = -116.0
-icon = ExtResource("11")
-
-[node name="MS" type="Button" parent="UI/MobilePad"]
-focus_mode = 0
-expand_icon = true
-anchor_top = 1.0
-anchor_bottom = 1.0
-offset_left = 120.0
-offset_top = -204.0
-offset_right = 208.0
-offset_bottom = -116.0
-icon = ExtResource("12")
-
-[node name="MD" type="Button" parent="UI/MobilePad"]
-focus_mode = 0
-expand_icon = true
-anchor_top = 1.0
-anchor_bottom = 1.0
-offset_left = 212.0
-offset_top = -204.0
-offset_right = 300.0
-offset_bottom = -116.0
-icon = ExtResource("13")
+offset_left = 24.0
+offset_top = -244.0
+offset_right = 244.0
+offset_bottom = -24.0
+script = ExtResource("30")
 
 [node name="MDrop" type="Button" parent="UI/MobilePad"]
 focus_mode = 0
@@ -246,4 +213,4 @@ horizontal_alignment = 1
 custom_minimum_size = Vector2(320, 58)
 layout_mode = 2
 theme_override_font_sizes/font_size = 20
-text = "다시 시작 (R)"
+text = "다시 시작"

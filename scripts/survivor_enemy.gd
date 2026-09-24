@@ -21,9 +21,44 @@ var alt := 0
 var adds := 0.0
 var spin := 0.0
 var tick := 0.0
+var ring := 0.0
+var rest_t := 0.0
 var dying := false
 var death_t := 0.0
 var rng := RandomNumberGenerator.new()
+var flash_t := 0.0
+var _flash_saved: Array = [] # [MeshInstance3D, orig_material]
+
+static var _flash_mat: StandardMaterial3D
+
+static func flash_material() -> StandardMaterial3D:
+	if _flash_mat == null:
+		_flash_mat = StandardMaterial3D.new()
+		_flash_mat.albedo_color = Color(1, 1, 1)
+		_flash_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	return _flash_mat
+
+func start_flash() -> void:
+	if model == null:
+		return
+	if flash_t <= 0.0:
+		_flash_saved.clear()
+		for mi in model.find_children("*", "MeshInstance3D", true, false):
+			_flash_saved.append([mi, (mi as MeshInstance3D).material_override])
+	for pair in _flash_saved:
+		if is_instance_valid(pair[0]):
+			(pair[0] as MeshInstance3D).material_override = flash_material()
+	flash_t = 0.12
+
+func tick_flash(delta: float) -> void:
+	if flash_t <= 0.0:
+		return
+	flash_t -= delta
+	if flash_t <= 0.0:
+		for pair in _flash_saved:
+			if is_instance_valid(pair[0]):
+				(pair[0] as MeshInstance3D).material_override = pair[1]
+		_flash_saved.clear()
 
 func setup(t: String, hp_mul: float) -> void:
 	type = t
@@ -82,6 +117,7 @@ func _add_lib(path: String, target: String) -> void:
 
 func take_hit(dmg_amount: float, from: Vector3, knock: float) -> bool:
 	hp -= dmg_amount
+	start_flash()
 	var away := global_position - from
 	away.y = 0.0
 	if away.length() > 0.01:

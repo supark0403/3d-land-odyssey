@@ -7,6 +7,8 @@ const PY_MIN := 1.0
 const PY_MAX := 9.0
 const PZ := 10.0
 const SAVE_PATH := "user://g2048.cfg"
+# 적 기수 +X 가정 → -PI/2 로 +Z(플레이어 쪽)를 봄. 이상하면 부호 뒤집기
+const ENEMY_YAW := -PI * 0.5
 
 var score := 0
 var best := 0
@@ -18,6 +20,7 @@ var power := 1
 var fire_t := 0.0
 var iframes := 0.0
 var touch := Vector2.ZERO
+var stick: VirtualStick
 var last_sfx := ""
 var rng := RandomNumberGenerator.new()
 
@@ -43,9 +46,9 @@ const PLANES := {
 }
 # kind: hp, speed, score, r, fire_interval(0=안쏨)
 const FOE := {
-	"dart": {"hp": 2.0, "speed": 7.0, "score": 100, "r": 1.0, "fire": 0.0},
-	"gunship": {"hp": 6.0, "speed": 4.5, "score": 250, "r": 1.2, "fire": 0.0},
-	"shooter": {"hp": 4.0, "speed": 3.5, "score": 400, "r": 1.1, "fire": 2.2},
+	"dart": {"hp": 2.0, "speed": 7.0, "score": 100, "r": 1.0, "fire": 0.0, "pattern": "aimed1", "interval": 3.0},
+	"gunship": {"hp": 6.0, "speed": 4.5, "score": 250, "r": 1.2, "fire": 0.0, "pattern": "spread3", "interval": 2.5},
+	"shooter": {"hp": 4.0, "speed": 3.5, "score": 400, "r": 1.1, "fire": 2.2, "pattern": "spread2", "interval": 2.0},
 	"boss1": {"hp": 120.0, "speed": 2.0, "score": 5000, "r": 2.2, "fire": 1.6},
 	"boss2": {"hp": 200.0, "speed": 2.2, "score": 8000, "r": 2.4, "fire": 1.4},
 	"boss3": {"hp": 300.0, "speed": 2.4, "score": 15000, "r": 2.6, "fire": 1.2},
@@ -123,7 +126,7 @@ func _build_player() -> void:
 	player = Node3D.new()
 	player.name = "Player"
 	var vis := _plane_mesh("player")
-	vis.rotation.y = PI # -Z로 비행 (기수 +Z 가정)
+	vis.rotation.y = PI * 0.5 # 기수 +X 가정, -Z(적 방향)를 봄
 	player.add_child(vis)
 	add_child(player)
 
@@ -205,12 +208,13 @@ func _show_banner(t: String) -> void:
 func _spawn_foe(kind: String, pos: Vector3) -> Dictionary:
 	var root := Node3D.new()
 	var vis := _plane_mesh(kind)
+	vis.rotation.y = ENEMY_YAW
 	root.add_child(vis)
 	root.position = pos
 	enemies_node.add_child(root)
 	var d: Dictionary = FOE[kind]
 	var hp0 := float(d["hp"]) * (1.0 + 0.25 * float(stage - 1))
-	var e := {"node": root, "kind": kind, "hp": hp0, "maxhp": hp0, "speed": float(d["speed"]), "score": int(d["score"]), "r": float(d["r"]), "fire": float(d["fire"]), "fire_t": rng.randf_range(1.0, 2.0), "boss": kind.begins_with("boss"), "t": 0.0, "base_x": pos.x, "seed": rng.randf() * TAU}
+	var e := {"node": root, "kind": kind, "hp": hp0, "maxhp": hp0, "speed": float(d["speed"]), "score": int(d["score"]), "r": float(d["r"]), "fire": float(d["fire"]), "fire_t": rng.randf_range(1.0, 2.0), "boss": kind.begins_with("boss"), "t": 0.0, "base_x": pos.x, "seed": rng.randf() * TAU, "pattern": str(d.get("pattern", ""))}
 	enemies.append(e)
 	return e
 
@@ -332,16 +336,9 @@ func _physics_process(delta: float) -> void:
 func _update_player(delta: float) -> void:
 	if iframes > 0.0:
 		iframes -= delta
-	var ax := touch.x
-	var ay := touch.y
-	if Input.is_physical_key_pressed(KEY_A) or Input.is_physical_key_pressed(KEY_LEFT):
-		ax -= 1.0
-	if Input.is_physical_key_pressed(KEY_D) or Input.is_physical_key_pressed(KEY_RIGHT):
-		ax += 1.0
-	if Input.is_physical_key_pressed(KEY_W) or Input.is_physical_key_pressed(KEY_UP):
-		ay += 1.0
-	if Input.is_physical_key_pressed(KEY_S) or Input.is_physical_key_pressed(KEY_DOWN):
-		ay -= 1.0
+	var sv: Vector2 = stick.value if stick != null else Vector2.ZERO
+	var ax := touch.x + sv.x + Controls.axis_pressed("shmup", "left", "right")
+	var ay := touch.y - sv.y + Controls.axis_pressed("shmup", "down", "up")
 	var d := Vector3(clampf(ax, -1.0, 1.0), clampf(ay, -1.0, 1.0), 0.0)
 	if d.length() > 1.0:
 		d = d.normalized()
@@ -404,9 +401,17 @@ func _update_enemies(delta: float) -> void:
 			node.position.z += float(e["speed"]) * delta
 			node.position.x += sin(Time.get_ticks_msec() / 1000.0 + float(e.get("seed", 0.0))) * 1.5 * delta
 			e["fire_t"] = float(e.get("fire_t", 0.0)) - delta
-			if str(e["kind"]) == "shooter" and float(e["fire_t"]) <= 0.0 and node.position.z > -20.0 and node.position.z < 6.0:
-				e["fire_t"] = 2.2
-				_enemy_bolt(node.global_position, (pp - node.global_position).normalized() * 12.0)
+			if str(e.get("pattern", "")) != "" and float(e["fire_t"]) <= 0.0 and node.position.z > -20.0 and node.position.z < 6.0:
+				e["fire_t"] = float(FOE[str(e["kind"])]["interval"])
+				var from: Vector3 = node.global_position
+				var aim: Vector3 = (pp - from).normalized()
+				match str(e.get("pattern", "")):
+					"aimed1":
+						_enemy_bolt(from, aim * 10.0)
+					"spread2":
+						_aimed_burst(from, pp, 2, 0.22, 12.0)
+					"spread3":
+						_aimed_burst(from, pp, 3, 0.2, 11.0)
 		# 화면 밖 제거
 		if node.position.z > 16.0:
 			node.queue_free()
@@ -531,24 +536,7 @@ func _save_best() -> void:
 # ---------- 입력/UI ----------
 
 func _wire_mobile() -> void:
-	var defs := {"MW": "w", "MA": "a", "MS": "s", "MD": "d"}
-	for n in defs.keys():
-		var b: Button = mobile_pad.get_node_or_null(n) as Button
-		if b == null:
-			continue
-		b.button_down.connect(_on_touch.bind(str(defs[n]), true))
-		b.button_up.connect(_on_touch.bind(str(defs[n]), false))
-
-func _on_touch(dir: String, pressed: bool) -> void:
-	match dir:
-		"w":
-			touch.y = -1.0 if pressed else 0.0
-		"s":
-			touch.y = 1.0 if pressed else 0.0
-		"a":
-			touch.x = -1.0 if pressed else 0.0
-		"d":
-			touch.x = 1.0 if pressed else 0.0
+	stick = mobile_pad.get_node_or_null("Stick") as VirtualStick
 
 func _unhandled_key_input(event: InputEvent) -> void:
 	if not (event is InputEventKey):
@@ -556,9 +544,10 @@ func _unhandled_key_input(event: InputEvent) -> void:
 	var k := event as InputEventKey
 	if not k.pressed or k.echo:
 		return
-	if k.physical_keycode == KEY_R:
+	var code := int(k.physical_keycode)
+	if code in Controls.keys_for("global", "restart"):
 		restart()
-	elif k.physical_keycode == KEY_P:
+	elif code in Controls.keys_for("global", "pause"):
 		if get_tree().paused:
 			resume_game()
 		else:

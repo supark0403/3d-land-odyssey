@@ -31,7 +31,8 @@ var next_tier := 1
 var cursor := Vector3(0, DROP_Y, 0)
 var rng := RandomNumberGenerator.new()
 var last_sfx := ""
-var touch_move := Vector2.ZERO # 모바일 D패드: x=D+, y=S+
+var touch_move := Vector2.ZERO # 미사용(조이스틱으로 대체, 호환 유지)
+var stick: VirtualStick
 var _cd := 0.0
 var _over_t := {} # instance_id -> 누적 시간
 var _guide_line: MeshInstance3D
@@ -90,27 +91,10 @@ func restart() -> void:
 	_refresh_ui()
 
 func _wire_mobile() -> void:
-	var defs := {"MW": "w", "MA": "a", "MS": "s", "MD": "d"}
-	for n in defs.keys():
-		var b: Button = mobile_pad.get_node_or_null(n) as Button
-		if b == null:
-			continue
-		b.button_down.connect(_on_touch.bind(str(defs[n]), true))
-		b.button_up.connect(_on_touch.bind(str(defs[n]), false))
+	stick = mobile_pad.get_node_or_null("Stick") as VirtualStick
 	var drop_b: Button = mobile_pad.get_node_or_null("MDrop") as Button
 	if drop_b != null:
 		drop_b.pressed.connect(drop)
-
-func _on_touch(dir: String, pressed: bool) -> void:
-	match dir:
-		"w":
-			touch_move.y = -1.0 if pressed else 0.0
-		"s":
-			touch_move.y = 1.0 if pressed else 0.0
-		"a":
-			touch_move.x = -1.0 if pressed else 0.0
-		"d":
-			touch_move.x = 1.0 if pressed else 0.0
 
 func _pick_drop() -> int:
 	return DROP_POOL[rng.randi_range(0, DROP_POOL.size() - 1)]
@@ -172,18 +156,11 @@ func _physics_process(delta: float) -> void:
 		return
 	if _cd > 0.0:
 		_cd -= delta
-	var ax := 0.0
-	var az := 0.0
-	if Input.is_physical_key_pressed(KEY_A) or Input.is_physical_key_pressed(KEY_LEFT):
-		ax -= 1.0
-	if Input.is_physical_key_pressed(KEY_D) or Input.is_physical_key_pressed(KEY_RIGHT):
-		ax += 1.0
-	if Input.is_physical_key_pressed(KEY_W) or Input.is_physical_key_pressed(KEY_UP):
-		az -= 1.0
-	if Input.is_physical_key_pressed(KEY_S) or Input.is_physical_key_pressed(KEY_DOWN):
-		az += 1.0
+	var ax: float = Controls.axis_pressed("suika", "left", "right")
+	var az: float = Controls.axis_pressed("suika", "up", "down")
 	# 카메라 기준 이동 (궤도 회전해도 화면 방향과 일치)
-	var wish: Vector3 = Basis(Vector3.UP, rig_yaw.rotation.y) * Vector3(ax + touch_move.x, 0.0, az + touch_move.y)
+	var sv: Vector2 = stick.value if stick != null else Vector2.ZERO
+	var wish: Vector3 = Basis(Vector3.UP, rig_yaw.rotation.y) * Vector3(ax + sv.x, 0.0, az + sv.y)
 	if wish.length() > 1.0:
 		wish = wish.normalized()
 	var lim: float = BOX_HALF - float(TIERS[held]["r"]) - 0.1
@@ -199,11 +176,12 @@ func _unhandled_key_input(event: InputEvent) -> void:
 	var k := event as InputEventKey
 	if not k.pressed or k.echo:
 		return
-	if k.physical_keycode == KEY_SPACE:
+	var code := int(k.physical_keycode)
+	if code in Controls.keys_for("suika", "drop"):
 		drop()
-	elif k.physical_keycode == KEY_R:
+	elif code in Controls.keys_for("global", "restart"):
 		restart()
-	elif k.physical_keycode == KEY_P:
+	elif code in Controls.keys_for("global", "pause"):
 		if get_tree().paused:
 			resume_game()
 		else:

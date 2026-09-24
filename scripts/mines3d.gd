@@ -77,6 +77,13 @@ func _mat_for(kind: String) -> StandardMaterial3D:
 			m.albedo_color = Color(0.35, 0.5, 0.75)
 		elif kind == "flag":
 			m.albedo_color = Color(0.95, 0.6, 0.2)
+		elif kind == "flagbox":
+			m.albedo_color = Color(0.35, 0.5, 0.75, 0.35)
+			m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+		elif kind == "pole":
+			m.albedo_color = Color(0.75, 0.77, 0.82)
+		elif kind == "pennant":
+			m.albedo_color = Color(0.9, 0.2, 0.2)
 		elif kind == "mine":
 			m.albedo_color = Color(0.9, 0.2, 0.2)
 		else:
@@ -233,35 +240,77 @@ func _render_all() -> void:
 func _render_cell(c: Vector3i) -> void:
 	var st := int(state.get(c, 0))
 	if st == 1 and not mines.has(c):
-		# 열린 칸은 박스 없이 숫자만 (뒤쪽 클릭이 통과함)
+		# 열린 칸은 박스 없이 숫자만 보드에 직접 (부모 따라 숨겨지는 것 방지)
 		if _count(c) > 0:
-			var mi := MeshInstance3D.new()
-			mi.mesh = _box_mesh
-			mi.visible = false
-			_add_mark(mi, str(_count(c)), NUM_COLS.get(_count(c), Color.WHITE))
-			mi.position = cell_to_world(c)
-			board_node.add_child(mi)
+			_add_mark(board_node, cell_to_world(c), str(_count(c)), NUM_COLS.get(_count(c), Color.WHITE))
 		return
 	var mi2 := MeshInstance3D.new()
 	mi2.mesh = _box_mesh
 	if st == 0:
 		mi2.material_override = _mat_for("hidden")
 	elif st == 2:
-		mi2.material_override = _mat_for("flag")
+		mi2.material_override = _mat_for("flagbox")
+		mi2.add_child(_make_flag(0.55))
+		_flag_edges(mi2)
 	else:
 		mi2.material_override = _mat_for("mine")
-		_add_mark(mi2, "X", Color.WHITE)
+		_add_mark(board_node, cell_to_world(c), "X", Color.WHITE)
 	mi2.position = cell_to_world(c)
 	board_node.add_child(mi2)
 
-func _add_mark(mi: MeshInstance3D, t: String, col: Color) -> void:
+func _make_flag(s := 1.0) -> Node3D:
+	# 미니 깃발: 기둥 + 페넌트
+	var root := Node3D.new()
+	var pole := MeshInstance3D.new()
+	var cyl := CylinderMesh.new()
+	cyl.top_radius = 0.06 * s
+	cyl.bottom_radius = 0.06 * s
+	cyl.height = 0.9 * s
+	pole.mesh = cyl
+	pole.material_override = _mat_for("pole")
+	pole.position = Vector3(0, 0.55 * s - 0.47 * (1.0 - s), 0)
+	root.add_child(pole)
+	var pen := MeshInstance3D.new()
+	var pb := BoxMesh.new()
+	pb.size = Vector3(0.45 * s, 0.26 * s, 0.05 * s)
+	pen.mesh = pb
+	pen.material_override = _mat_for("pennant")
+	pen.position = Vector3(0.26 * s, (0.55 * s - 0.47 * (1.0 - s)) + 0.27 * s, 0)
+	root.add_child(pen)
+	return root
+
+func _flag_edges(cell: MeshInstance3D) -> void:
+	# 반투명 박스의 불투명 모서리 프레임
+	var h := 0.47
+	var t := 0.035
+	var mat := _mat_for("hidden")
+	for sy in [-h, h]:
+		for sz in [-h, h]:
+			_edge_bar(cell, Vector3(0, sy, sz), Vector3(h * 2.0, t * 2.0, t * 2.0), mat)
+		for sx in [-h, h]:
+			_edge_bar(cell, Vector3(sx, sy, 0), Vector3(t * 2.0, t * 2.0, h * 2.0), mat)
+	for sx in [-h, h]:
+		for sz in [-h, h]:
+			_edge_bar(cell, Vector3(sx, 0, sz), Vector3(t * 2.0, h * 2.0, t * 2.0), mat)
+
+func _edge_bar(parent: Node3D, pos: Vector3, size: Vector3, mat: Material) -> void:
+	var mi := MeshInstance3D.new()
+	var b := BoxMesh.new()
+	b.size = size
+	b.material = mat
+	mi.mesh = b
+	mi.position = pos
+	parent.add_child(mi)
+
+func _add_mark(parent: Node3D, pos: Vector3, t: String, col: Color) -> void:
 	var lab := Label3D.new()
 	lab.text = t
 	lab.font_size = 96
 	lab.pixel_size = 0.006
 	lab.modulate = col
 	lab.billboard = BaseMaterial3D.BILLBOARD_ENABLED
-	mi.add_child(lab)
+	lab.position = pos
+	parent.add_child(lab)
 
 func _build_frame() -> void:
 	var edge := StandardMaterial3D.new()

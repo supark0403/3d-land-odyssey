@@ -1,12 +1,15 @@
-[gd_scene load_steps=9 format=4 uid="uid://c2048breakout01"]
+[gd_scene format=4 uid="uid://buqi2ucg5lvx5"]
 
 [ext_resource type="Script" path="res://scripts/breakout.gd" id="1"]
+[ext_resource type="Script" path="res://scripts/virtual_stick.gd" id="30"]
 [ext_resource type="AudioStream" path="res://assets/sfx/click.ogg" id="2"]
 [ext_resource type="AudioStream" path="res://assets/sfx/success.ogg" id="3"]
 [ext_resource type="AudioStream" path="res://assets/sfx/error.ogg" id="4"]
 [ext_resource type="AudioStream" path="res://assets/sfx/cancel.ogg" id="5"]
 [ext_resource type="Texture2D" path="res://assets/pxui/icon_arrow_left.png" id="11"]
 [ext_resource type="Texture2D" path="res://assets/pxui/icon_arrow_right.png" id="12"]
+[ext_resource type="Texture2D" path="res://assets/pxui/icon_arrow_up.png" id="13"]
+[ext_resource type="Texture2D" path="res://assets/pxui/icon_arrow_down.png" id="15"]
 [ext_resource type="Texture2D" path="res://assets/pxui/hearts/heart_full.png" id="14"]
 
 [sub_resource type="Environment" id="Env_1"]
@@ -136,7 +139,7 @@ offset_top = -34.0
 offset_right = -16.0
 offset_bottom = -10.0
 theme_override_font_sizes/font_size = 15
-text = "A/D 이동 · 스페이스/클릭 발사 · P 일시정지 · R 재시작"
+text = "A/D 좌우 · W/S 상하 · 스페이스/클릭 발사 · P 일시정지 · R 재시작"
 horizontal_alignment = 1
 
 [node name="PauseButton" type="Button" parent="UI"]
@@ -206,7 +209,7 @@ horizontal_alignment = 1
 custom_minimum_size = Vector2(320, 58)
 layout_mode = 2
 theme_override_font_sizes/font_size = 20
-text = "다시 시작 (R)"
+text = "다시 시작"
 
 [node name="MobilePad" type="Control" parent="UI"]
 visible = false
@@ -214,27 +217,15 @@ mouse_filter = 2
 anchor_right = 1.0
 anchor_bottom = 1.0
 
-[node name="MLeft" type="Button" parent="UI/MobilePad"]
-focus_mode = 0
-expand_icon = true
+[node name="Stick" type="Control" parent="UI/MobilePad"]
+custom_minimum_size = Vector2(220, 220)
 anchor_top = 1.0
 anchor_bottom = 1.0
-offset_left = 28.0
-offset_top = -204.0
-offset_right = 116.0
-offset_bottom = -116.0
-icon = ExtResource("11")
-
-[node name="MRight" type="Button" parent="UI/MobilePad"]
-focus_mode = 0
-expand_icon = true
-anchor_top = 1.0
-anchor_bottom = 1.0
-offset_left = 120.0
-offset_top = -204.0
-offset_right = 208.0
-offset_bottom = -116.0
-icon = ExtResource("12")
+offset_left = 24.0
+offset_top = -244.0
+offset_right = 244.0
+offset_bottom = -24.0
+script = ExtResource("30")
 
 [node name="MFire" type="Button" parent="UI/MobilePad"]
 focus_mode = 0

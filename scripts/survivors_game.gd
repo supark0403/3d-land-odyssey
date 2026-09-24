@@ -5,10 +5,7 @@ extends Node3D
 const ARENA := 50.0
 const SPAWN_R := 22.0
 const ENEMY_CAP := 70
-# 타일 톤다운 (노란기·밝기 완화): 임포트 머티리얼 복제 후 albedo 승산
-const TILE_TINT := Color(0.72, 0.74, 0.76)
 
-var survive_time := 300.0
 var t := 0.0
 var score_kills := 0
 var over := false
@@ -23,6 +20,7 @@ var enemies: Array = []
 var bolts: Array = [] # {node, vel, dmg, pierce, team, life, homing, hit}
 var gems: Array = [] # {node, value}
 var _dying: Array = []
+var dmgnums: Array = [] # {node, t}
 var _spawn_t := 0.0
 var _up_options: Array = []
 var _up_stacks := {}
@@ -62,6 +60,7 @@ var _mana_imgs: Array = []
 @onready var continue_btn: Button = $UI/PausePanel/VBox/ContinueButton
 @onready var menu_btn: Button = $UI/PausePanel/VBox/MenuButton
 @onready var mobile_pad: Control = $UI/MobilePad
+var stick: VirtualStick
 @onready var sfx_shoot: AudioStreamPlayer = $SfxShoot
 @onready var sfx_kill: AudioStreamPlayer = $SfxKill
 @onready var sfx_level: AudioStreamPlayer = $SfxLevel
@@ -78,11 +77,13 @@ func _ready() -> void:
 		_health_imgs.append(load("res://assets/pxui/bars/bar_health_8seg_%dfilled.png" % i))
 		_mana_imgs.append(load("res://assets/pxui/bars/bar_mana_8seg_%dfilled.png" % i))
 	rng.randomize()
-	_build_floor()
+	_build_floor(0)
+	_build_outer()
 	var cfg0 := ConfigFile.new()
 	if cfg0.load(SAVE_PATH) == OK:
 		best = int(cfg0.get_value("game", "best_surv", 0))
 	restart_btn.pressed.connect(_on_restart_button)
+	restart_btn.text = "캐릭터 선택"
 	pause_btn.pressed.connect(pause_game)
 	continue_btn.pressed.connect(resume_game)
 	menu_btn.pressed.connect(_on_menu_button)
@@ -143,59 +144,96 @@ func _collect_meshes(n: Node, acc: Transform3D, out: Array) -> void:
 	for c in n.get_children():
 		_collect_meshes(c, tt, out)
 
-func _mesh_entries(path: String) -> Array:
-	if _mesh_cache.has(path):
-		return _mesh_cache[path]
+func _mesh_entries(path: String, tint: Color) -> Array:
+	# 테마별 복제 메쉬 + 틴트 (원본 공유 오염 방지)
+	var key := path + "|" + str(tint)
+	if _mesh_cache.has(key):
+		return _mesh_cache[key]
 	var out := []
 	var packed: PackedScene = load(path)
 	if packed != null:
 		var tmp: Node = packed.instantiate()
 		_collect_meshes(tmp, Transform3D.IDENTITY, out)
 		tmp.queue_free()
-	_mesh_cache[path] = out
-	_tint_entries(out)
-	return out
-
-func _tint_entries(entries: Array) -> void:
-	for entry in entries:
-		var mesh := entry["mesh"] as Mesh
-		if mesh == null or mesh.has_meta("tinted"):
-			continue
-		mesh.set_meta("tinted", true)
+	var duped := []
+	for entry in out:
+		var mesh := (entry["mesh"] as Mesh).duplicate() as Mesh
 		for si in range(mesh.get_surface_count()):
 			var sm := mesh.surface_get_material(si)
 			if sm is StandardMaterial3D:
 				var dm := (sm as StandardMaterial3D).duplicate() as StandardMaterial3D
-				dm.albedo_color = TILE_TINT
+				dm.albedo_color = tint
 				mesh.surface_set_material(si, dm)
+		duped.append({"mesh": mesh, "local": entry["local"]})
+	_mesh_cache[key] = duped
+	return duped
 
-func _build_floor() -> void:
+var floor_node: Node3D
+
+# 테마별 (바닥종류, 틴트): 0 풀 → 1 광물 → 2 용암. 전부 KayKit 헥스만 사용
+const THEME_TINT := {
+	0: {"base": Color(0.72, 0.74, 0.76), "road": Color(0.72, 0.74, 0.76), "water": Color(0.72, 0.74, 0.76)},
+	1: {"base": Color(0.6, 0.64, 0.75), "road": Color(0.78, 0.74, 0.7), "water": Color(0.7, 0.85, 1.0)},
+	2: {"base": Color(0.55, 0.38, 0.32), "road": Color(0.5, 0.34, 0.3), "water": Color(0.95, 0.62, 0.5)},
+}
+
+func _floor_placements(theme: int) -> Dictionary:
 	var frng := RandomNumberGenerator.new()
 	frng.seed = 4242
 	var ponds := [Vector3(-14, 0, -10), Vector3(16, 0, 8), Vector3(2, 0, 20)]
 	var placements := {}
-	for q in range(-32, 33):
+	var letters := ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M"]
+	# q 범위 확장: axial 전단으로 잘리는 모서리(좌하·우상)까지 정사각형으로 채움
+	for q in range(-44, 45):
 		for r in range(-32, 33):
 			var wx := 2.0 * (float(q) + float(r) * 0.5)
 			var wz := 1.732 * float(r)
 			if absf(wx) > 55.0 or absf(wz) > 55.0:
 				continue
+			var wy := 0.0
 			var kind := "res://assets/surv/hex/hex_grass.gltf"
+			var group := "base"
 			var rot := 0.0
 			for pd in ponds:
 				if Vector2(wx - pd.x, wz - pd.z).length() < 4.5:
 					kind = "res://assets/surv/hex/hex_water.gltf"
-			if kind.ends_with("hex_grass.gltf") and frng.randf() < 0.09:
-				var letters := ["A", "B", "C", "D", "E"]
-				kind = "res://assets/surv/hex/hex_road_" + letters[frng.randi_range(0, 4)] + ".gltf"
-				rot = float(frng.randi_range(0, 5)) * PI / 3.0
+					group = "water"
+					wy = 0.2 # 가라앉은 물 타일을 풀과 같은 높이로
+			if group == "base":
+				var roll := frng.randf()
+				if theme == 1 and roll < 0.5:
+					kind = "res://assets/surv/hex/hex_road_" + letters[frng.randi_range(0, 12)] + ".gltf"
+					group = "road"
+					rot = float(frng.randi_range(0, 5)) * PI / 3.0
+				elif theme == 2 and roll < 0.55:
+					kind = "res://assets/surv/hex/hex_grass_bottom.gltf"
+				elif theme == 2 and roll < 0.8:
+					kind = "res://assets/surv/hex/hex_road_" + letters[frng.randi_range(0, 12)] + ".gltf"
+					group = "road"
+					rot = float(frng.randi_range(0, 5)) * PI / 3.0
+				elif theme == 0 and roll < 0.09:
+					kind = "res://assets/surv/hex/hex_road_" + letters[frng.randi_range(0, 4)] + ".gltf"
+					group = "road"
+					rot = float(frng.randi_range(0, 5)) * PI / 3.0
 			if not placements.has(kind):
-				placements[kind] = []
-			(placements[kind] as Array).append(Transform3D(Basis(Vector3.UP, rot), Vector3(wx, 0, wz)))
+				placements[kind] = {"cells": [], "group": group}
+			((placements[kind] as Dictionary)["cells"] as Array).append(Transform3D(Basis(Vector3.UP, rot), Vector3(wx, wy, wz)))
+	return placements
+
+func _build_floor(theme := 0) -> void:
+	if floor_node == null:
+		floor_node = Node3D.new()
+		floor_node.name = "Floor"
+		add_child(floor_node)
+	for c in floor_node.get_children():
+		c.queue_free()
 	var map_aabb := AABB(Vector3(-60, -2, -60), Vector3(120, 8, 120))
+	var placements := _floor_placements(theme)
 	for kind in placements.keys():
-		for entry in _mesh_entries(str(kind)):
-			var cells: Array = placements[kind]
+		var info: Dictionary = placements[kind]
+		var cells: Array = info["cells"]
+		var tint: Color = (THEME_TINT[theme] as Dictionary)[str(info["group"])]
+		for entry in _mesh_entries(str(kind), tint):
 			var mm := MultiMesh.new()
 			mm.transform_format = MultiMesh.TRANSFORM_3D
 			mm.mesh = entry["mesh"]
@@ -205,7 +243,35 @@ func _build_floor() -> void:
 			var mmi := MultiMeshInstance3D.new()
 			mmi.multimesh = mm
 			mmi.custom_aabb = map_aabb
-			add_child(mmi)
+			floor_node.add_child(mmi)
+
+func _build_outer() -> void:
+	# 외곽: 바닥 밖은 어두운 대지로 (허공 방지)
+	var outer := MeshInstance3D.new()
+	var ob := BoxMesh.new()
+	ob.size = Vector3(400, 0.1, 400)
+	var om := StandardMaterial3D.new()
+	om.albedo_color = Color(0.07, 0.08, 0.12)
+	outer.mesh = ob
+	outer.material_override = om
+	outer.position = Vector3(0, -0.12, 0)
+	add_child(outer)
+	# 경계벽: 보이는 차단선 (투명벽 느낌 제거)
+	var edge := StandardMaterial3D.new()
+	edge.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	edge.albedo_color = Color(0.5, 0.8, 1.0, 0.35)
+	for sx in [-1.0, 1.0]:
+		_solid_bar(Vector3(sx * 55.5, 0.6, 0), Vector3(0.3, 1.2, 111.0), edge)
+		_solid_bar(Vector3(0, 0.6, sx * 55.5), Vector3(111.0, 1.2, 0.3), edge)
+
+func _solid_bar(pos: Vector3, size: Vector3, mat: Material) -> void:
+	var mi := MeshInstance3D.new()
+	var b := BoxMesh.new()
+	b.size = size
+	b.material = mat
+	mi.mesh = b
+	mi.position = pos
+	add_child(mi)
 
 # ---------- 전투 중재 ----------
 
@@ -245,8 +311,8 @@ func spawn_bolts(_player: Node3D, dir: Vector3, st: Dictionary) -> void:
 		_spawn_bolt(_player.global_position + Vector3(0, 1.2, 0) + d * 0.6, d * float(st["pspeed"]), float(st["dmg"]), int(st["pierce"]), 0, float(st["range"]) / float(st["pspeed"]), st.get("homing", false) == true, Color(0.4, 0.9, 1.0))
 	_play_sfx("shoot", sfx_shoot, 1.0)
 
-func spawn_enemy_bolt(pos: Vector3, dir: Vector3) -> void:
-	_spawn_bolt(pos, dir * 9.0, 8.0, 0, 1, 2.5, false, Color(0.9, 0.3, 0.9))
+func spawn_enemy_bolt(pos: Vector3, dir: Vector3, speed := 9.0) -> void:
+	_spawn_bolt(pos, dir.normalized() * speed, 8.0, 0, 1, 3.0, false, Color(0.9, 0.3, 0.9))
 
 func _spawn_bolt(pos: Vector3, vel: Vector3, dmg: float, pierce: int, team: int, life: float, homing: bool, col: Color) -> void:
 	var root := Node3D.new()
@@ -268,6 +334,7 @@ func _damage_enemy(e: Node, dmg: float, from: Vector3, knock: float) -> void:
 	if not is_instance_valid(e) or (e as Node).get("dying") == true:
 		return
 	var dead: bool = (e as Node).call("take_hit", dmg, from, knock)
+	_spawn_dmgnum((e as Node3D).global_position, dmg)
 	if dead:
 		_start_death(e)
 	else:
@@ -343,8 +410,15 @@ func _spawn_enemy_forced(ttype: String, pos: Vector3) -> Node:
 	return _spawn_enemy_at(ttype, pos, false)
 
 func _spawn_enemy_at(ttype: String, pos: Vector3, use_ring: bool) -> Node:
+	if not SurvivorSetup.ENEMIES.has(ttype):
+		push_error("unknown enemy type: " + ttype)
+		return null
 	var e: Node = SurvivorEnemyScript.new()
 	(e as Node).call("setup", ttype, 1.0 + t / 75.0)
+	if (e as Node).get("model") == null:
+		push_error("enemy model missing: " + ttype)
+		(e as Node).queue_free()
+		return null
 	var p := pos
 	if use_ring:
 		var a := rng.randf() * TAU
@@ -369,6 +443,7 @@ func _start_stage(s: int) -> void:
 	for i in range(n):
 		var tt := 1.0 + float(i) * lerpf(2.2, 1.2, float(s - 1) / 2.0)
 		spawn_queue.append({"t": tt, "kind": _pick_stage_type(s)})
+	_build_floor(mini(s - 1, 2))
 	_show_banner("STAGE %d" % s)
 
 func _pick_stage_type(s: int) -> String:
@@ -410,46 +485,62 @@ func _boss_pattern(e: Node, dt: float) -> void:
 	fw.y = 0.0
 	fw = fw.normalized() if fw.length() > 0.05 else Vector3(0, 0, 1)
 	if kind == "boss1":
+		# 느린 조준 5점사 + 이중 링 교대
 		if float(e.get("shoot_cd")) <= 0.0:
-			e.set("shoot_cd", 1.8)
-			_aimed_burst(node.global_position + Vector3(0, 1.5, 0), pp, 3, 0.25)
+			e.set("shoot_cd", 2.0)
 			e.set("alt", int(e.get("alt")) + 1)
-			if int(e.get("alt")) % 2 == 0:
-				_radial(node.global_position + Vector3(0, 1.5, 0), 8)
+			if int(e.get("alt")) % 2 == 1:
+				_aimed_burst(node.global_position + Vector3(0, 1.5, 0), pp, 5, 0.16, 6.0)
+			else:
+				_radial(node.global_position + Vector3(0, 1.5, 0), 10, 5.5)
+				_radial(node.global_position + Vector3(0, 1.5, 0), 10, 5.5, PI / 10.0)
 	elif kind == "boss2":
+		# 6초 맹공 + 2.5초 휴식 (때릴 시간)
+		e.set("rest_t", float(e.get("rest_t")) + dt)
+		if fmod(float(e.get("rest_t")), 8.5) >= 6.0:
+			return
+		# 3갈래 나선 연사 + 조준 5점사 + 잡몹 소환
+		e.set("spin", float(e.get("spin")) + dt * 2.6)
+		e.set("tick", float(e.get("tick")) + dt)
+		if float(e.get("tick")) > 0.14:
+			e.set("tick", 0.0)
+			var sa: float = float(e.get("spin"))
+			for k in range(3):
+				spawn_enemy_bolt(node.global_position + Vector3(0, 1.5, 0), Vector3(cos(sa + TAU * float(k) / 3.0), 0, sin(sa + TAU * float(k) / 3.0)), 6.0)
 		if float(e.get("shoot_cd")) <= 0.0:
-			e.set("shoot_cd", 1.6)
-			_radial(node.global_position + Vector3(0, 1.5, 0), 12)
-			_aimed_burst(node.global_position + Vector3(0, 1.5, 0), pp, 5, 0.18)
+			e.set("shoot_cd", 2.2)
+			_aimed_burst(node.global_position + Vector3(0, 1.5, 0), pp, 5, 0.18, 6.5)
 		e.set("adds", float(e.get("adds")) + dt)
 		if float(e.get("adds")) > 7.0 and enemies.size() < 40:
 			e.set("adds", 0.0)
 			_spawn_enemy_forced("minion", node.global_position + Vector3(-3, 0, 2))
 			_spawn_enemy_forced("minion", node.global_position + Vector3(3, 0, 2))
 	else:
+		# 3갈래 회전탄 + 20발 링
 		e.set("spin", float(e.get("spin")) + dt * 2.2)
 		e.set("tick", float(e.get("tick")) + dt)
-		if float(e.get("tick")) > 0.35:
+		if float(e.get("tick")) > 0.3:
 			e.set("tick", 0.0)
-			e.set("shoot_cd", 1.0)
-			for k in range(2):
-				var a: float = float(e.get("spin")) + PI * float(k)
-				spawn_enemy_bolt(node.global_position + Vector3(0, 1.5, 0), Vector3(cos(a), 0, sin(a)) * 9.0)
-		if float(e.get("shoot_cd")) <= 0.0:
-			_radial(node.global_position + Vector3(0, 1.5, 0), 16)
+			var sa3: float = float(e.get("spin"))
+			for k in range(3):
+				spawn_enemy_bolt(node.global_position + Vector3(0, 1.5, 0), Vector3(cos(sa3 + TAU * float(k) / 3.0), 0, sin(sa3 + TAU * float(k) / 3.0)), 6.0)
+		e.set("ring", float(e.get("ring")) + dt)
+		if float(e.get("ring")) > 2.6:
+			e.set("ring", 0.0)
+			_radial(node.global_position + Vector3(0, 1.5, 0), 20, 5.5)
 
-func _aimed_burst(from: Vector3, target: Vector3, n: int, spread: float) -> void:
+func _aimed_burst(from: Vector3, target: Vector3, n: int, spread: float, speed := 9.0) -> void:
 	var base: Vector3 = target - from
 	base.y = 0.0
 	base = base.normalized() if base.length() > 0.05 else Vector3(0, 0, 1)
 	for i in range(n):
 		var a := (float(i) - float(n - 1) * 0.5) * spread
-		spawn_enemy_bolt(from, base.rotated(Vector3.UP, a) * 11.0)
+		spawn_enemy_bolt(from, base.rotated(Vector3.UP, a), speed)
 
-func _radial(from: Vector3, n: int) -> void:
+func _radial(from: Vector3, n: int, speed := 9.0, offset := 0.0) -> void:
 	for i in range(n):
-		var a := TAU * float(i) / float(n)
-		spawn_enemy_bolt(from, Vector3(cos(a), 0, sin(a)) * 9.0)
+		var a := offset + TAU * float(i) / float(n)
+		spawn_enemy_bolt(from, Vector3(cos(a), 0, sin(a)), speed)
 
 # ---------- 업그레이드 ----------
 
@@ -492,9 +583,14 @@ const UP_ICONS := {
 }
 
 func _offer_upgrades() -> void:
+	_up_options = build_options()
+	if _up_options.is_empty():
+		# 전부 최대 강화됨: 멈춤 방지를 위해 패널 없이 계속 (체력 보너스)
+		upgrading = false
+		player.call("heal_full")
+		return
 	upgrading = true
 	get_tree().paused = true
-	_up_options = build_options()
 	for i in range(3):
 		var b: Button = $UI/UpgradePanel/VBox.get_node("UpBtn" + str(i)) as Button
 		if i < _up_options.size():
@@ -559,14 +655,9 @@ func _physics_process(delta: float) -> void:
 	if get_tree().paused or over or won or player == null or not is_instance_valid(player):
 		return
 	t += delta
-	if t >= survive_time:
-		won = true
-		over = true
-		_play_sfx("win", sfx_win, 1.0)
-		msg_label.text = "생존 성공! %d킬" % score_kills
-		msg_panel.visible = true
-		return
 	if not _player_dying:
+		if stick != null:
+			player.set("touch_dir", stick.value)
 		player.call("update_alive", delta, self)
 	else:
 		_player_death_t -= delta
@@ -594,7 +685,38 @@ func _physics_process(delta: float) -> void:
 	_update_dying(delta)
 	_refresh_ui()
 
+func _spawn_dmgnum(pos: Vector3, amount: float) -> void:
+	var l := Label3D.new()
+	l.text = str(maxi(1, int(round(amount))))
+	l.font_size = 96
+	l.pixel_size = 0.008
+	l.modulate = Color(1.0, 0.9, 0.4)
+	l.outline_size = 12
+	l.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	l.no_depth_test = true
+	l.position = pos + Vector3(0, 2.2, 0)
+	add_child(l)
+	dmgnums.append({"node": l, "t": 0.6})
+
+func _update_dmgnums(delta: float) -> void:
+	for i in range(dmgnums.size() - 1, -1, -1):
+		var d: Dictionary = dmgnums[i]
+		if not is_instance_valid(d["node"]):
+			dmgnums.remove_at(i)
+			continue
+		var node := d["node"] as Label3D
+		d["t"] = float(d["t"]) - delta
+		node.position.y += 1.8 * delta
+		var a := clampf(float(d["t"]) / 0.6, 0.0, 1.0)
+		var c: Color = node.modulate
+		c.a = a
+		node.modulate = c
+		if float(d["t"]) <= 0.0:
+			node.queue_free()
+			dmgnums.remove_at(i)
+
 func _update_dying(delta: float) -> void:
+	_update_dmgnums(delta)
 	for i in range(_dying.size() - 1, -1, -1):
 		var e: Node = _dying[i]
 		if not is_instance_valid(e):
@@ -609,9 +731,9 @@ func _update_enemies(delta: float) -> void:
 	var pp: Vector3 = player.global_position
 	# 분리 (O(n^2), n<=70)
 	for i in range(enemies.size()):
-		var a: Node = enemies[i]
-		if not is_instance_valid(a):
+		if not is_instance_valid(enemies[i]):
 			continue
+		var a: Node = enemies[i]
 		(a as Node).set("hit_cd", maxf(0.0, float((a as Node).get("hit_cd")) - delta))
 		var pa: Vector3 = (a as Node3D).global_position
 		for j in range(i + 1, enemies.size()):
@@ -636,7 +758,9 @@ func _update_enemies(delta: float) -> void:
 		var dist := to.length()
 		if dist > 0.05:
 			en.global_position += to.normalized() * float(e.get("speed")) * delta
-			(e.get("model") as Node3D).rotation.y = lerp_angle((e.get("model") as Node3D).rotation.y, atan2(to.x, to.z), 1.0 - exp(-10.0 * delta))
+			var mdl := e.get("model") as Node3D
+			if mdl != null:
+				mdl.rotation.y = lerp_angle(mdl.rotation.y, atan2(to.x, to.z), 1.0 - exp(-10.0 * delta))
 		# 스케일 팝 복구
 		var base: float = float(e.get_meta("base_scl"))
 		(e as Node3D).scale = (e as Node3D).scale.lerp(Vector3.ONE * base, 1.0 - exp(-8.0 * delta))
@@ -662,7 +786,10 @@ func _update_enemies(delta: float) -> void:
 		if str(e.get("type")).begins_with("boss"):
 			_boss_pattern(e, delta)
 	for i in range(enemies.size() - 1, -1, -1):
-		if not is_instance_valid(enemies[i]):
+		var ee: Node = enemies[i]
+		if not is_instance_valid(ee) or ee.get("model") == null:
+			if is_instance_valid(ee):
+				ee.queue_free()
 			enemies.remove_at(i)
 
 func _update_bolts(delta: float) -> void:
@@ -727,6 +854,7 @@ func _update_gems(_delta: float) -> void:
 				return
 
 func _enemy_anim(e: Node, delta: float) -> void:
+	(e as Node).call("tick_flash", delta)
 	var ap: AnimationPlayer = e.get("anim")
 	if ap == null:
 		return
@@ -770,34 +898,13 @@ func _player_die() -> void:
 		cfg.load(SAVE_PATH)
 		cfg.set_value("game", "best_surv", best)
 		cfg.save(SAVE_PATH)
-	msg_label.text = "전사! %d킬 %d초 생존 (R: 재시작)" % [score_kills, int(t)]
+	msg_label.text = "전사! %d킬 %d초 생존" % [score_kills, int(t)]
 	msg_panel.visible = true
 
 # ---------- 입력/UI ----------
 
 func _wire_mobile() -> void:
-	var defs := {"MW": "w", "MA": "a", "MS": "s", "MD": "d"}
-	for n in defs.keys():
-		var b: Button = mobile_pad.get_node_or_null(n) as Button
-		if b == null:
-			continue
-		b.button_down.connect(_on_touch.bind(str(defs[n]), true))
-		b.button_up.connect(_on_touch.bind(str(defs[n]), false))
-
-func _on_touch(dir: String, pressed: bool) -> void:
-	if player == null or not is_instance_valid(player):
-		return
-	var td: Vector2 = player.get("touch_dir")
-	match dir:
-		"w":
-			td.y = -1.0 if pressed else 0.0
-		"s":
-			td.y = 1.0 if pressed else 0.0
-		"a":
-			td.x = -1.0 if pressed else 0.0
-		"d":
-			td.x = 1.0 if pressed else 0.0
-	player.set("touch_dir", td)
+	stick = mobile_pad.get_node_or_null("Stick") as VirtualStick
 
 func _unhandled_key_input(event: InputEvent) -> void:
 	if not (event is InputEventKey):
@@ -805,9 +912,13 @@ func _unhandled_key_input(event: InputEvent) -> void:
 	var k := event as InputEventKey
 	if not k.pressed or k.echo:
 		return
-	if k.physical_keycode == KEY_R:
-		restart()
-	elif k.physical_keycode == KEY_P:
+	var code := int(k.physical_keycode)
+	if code in Controls.keys_for("global", "restart"):
+		if over or won:
+			_on_restart_button()
+		else:
+			restart()
+	elif code in Controls.keys_for("global", "pause"):
 		if get_tree().paused:
 			resume_game()
 		else:
@@ -829,7 +940,8 @@ func resume_game() -> void:
 
 func _on_restart_button() -> void:
 	_play_sfx("restart", sfx_restart, 1.0)
-	restart()
+	get_tree().paused = false
+	get_tree().change_scene_to_file("res://scenes/charselect.tscn")
 
 func _on_menu_button() -> void:
 	_play_sfx("restart", sfx_restart, 1.0)
@@ -849,12 +961,14 @@ func _refresh_ui() -> void:
 	xp_bar_img.texture = _mana_imgs[_bar_idx(float(player.get("xp")) / float(player.get("xp_need")))]
 	var mm := int(t) / 60
 	var ss := int(t) % 60
-	timer_label.text = "%d:%02d / 5:00" % [mm, ss]
+	timer_label.text = "%d:%02d" % [mm, ss]
 	level_label.text = "Lv.%d" % int(player.get("level"))
 	kill_label.text = "%d킬" % score_kills
 	var boss_found := false
 	for e in enemies:
-		if e is Node and is_instance_valid(e) and str((e as Node).get("type")).begins_with("boss"):
+		if not is_instance_valid(e):
+			continue
+		if str((e as Node).get("type")).begins_with("boss"):
 			var fr: float = float(e.get("hp")) / float(e.get("max_hp"))
 			boss_bar_img.visible = true
 			boss_bar_img.texture = _health_imgs[_bar_idx(fr)]

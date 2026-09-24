@@ -1,14 +1,14 @@
 extends Node3D
-## 3D 지렁이: 바닥 12x12 그리드, 사과 먹으면 +1칸·가속. 고정 카메라(방향 혼동 방지).
+## 3D 지렁이 (9x9x9 큐브): 6방향 이동 + 머리 추적 TPS 카메라.
+## 사과 +1칸·가속 (황금 +3). 반전 금지, 벽·자기충돌 사망.
 
-const COLS := 12
-const ROWS := 12
+const GS := 9
 const SAVE_PATH := "user://g2048.cfg"
 
-var snake: Array = [] # Vector2i head-first
-var dir := Vector2i(0, -1)
+var snake: Array = [] # Vector3i head-first
+var dir := Vector3i(0, 0, -1)
 var queued: Array = []
-var apple := Vector2i(-1, -1)
+var apple := Vector3i(-1, -1, -1)
 var golden := false
 var grow_pending := 0
 var score := 0
@@ -18,12 +18,14 @@ var interval := 0.22
 var acc := 0.0
 var last_sfx := ""
 var rng := RandomNumberGenerator.new()
+var _cam_flat := Vector3(0, 0, -1) # 카메라용 수평 헤딩 (수직 이동 때도 유지)
 
 var _body_node: Node3D
 var _apple_node: Node3D
 var _box_mesh: BoxMesh
 var _mats := {}
 
+@onready var cam: Camera3D = $Camera3D
 @onready var score_label: Label = $UI/ScoreLabel
 @onready var best_label: Label = $UI/BestLabel
 @onready var len_label: Label = $UI/LenLabel
@@ -40,16 +42,16 @@ var _mats := {}
 @onready var sfx_over: AudioStreamPlayer = $SfxOver
 @onready var sfx_restart: AudioStreamPlayer = $SfxRestart
 
-static func cell_to_world(c: Vector2i) -> Vector3:
-	return Vector3((float(c.x) - 5.5), 0.35, (float(c.y) - 5.5))
+static func cell_to_world(c: Vector3i) -> Vector3:
+	return Vector3(c) - Vector3(4, 4, 4)
 
 func _ready() -> void:
 	AudioSetup.apply_volumes()
 	UISkin.skin_scene($UI)
 	rng.randomize()
 	_box_mesh = BoxMesh.new()
-	_box_mesh.size = Vector3(0.92, 0.7, 0.92)
-	_build_floor()
+	_box_mesh.size = Vector3(0.92, 0.92, 0.92)
+	_build_cube()
 	_body_node = Node3D.new()
 	_body_node.name = "Body"
 	add_child(_body_node)
@@ -83,8 +85,8 @@ func _mat_for(kind: String) -> StandardMaterial3D:
 	return _mats[kind]
 
 func restart() -> void:
-	snake = [Vector2i(6, 8), Vector2i(6, 9), Vector2i(6, 10)]
-	dir = Vector2i(0, -1)
+	snake = [Vector3i(4, 4, 6), Vector3i(4, 4, 7), Vector3i(4, 4, 8)]
+	dir = Vector3i(0, 0, -1)
 	queued.clear()
 	grow_pending = 0
 	score = 0
@@ -92,21 +94,27 @@ func restart() -> void:
 	interval = 0.22
 	acc = 0.0
 	_spawn_apple()
+	_snap_camera()
 	get_tree().paused = false
 	msg_panel.visible = false
 	pause_panel.visible = false
 	_refresh_body()
 	_refresh_ui()
 
+func _in_cube(c: Vector3i) -> bool:
+	return c.x >= 0 and c.x < GS and c.y >= 0 and c.y < GS and c.z >= 0 and c.z < GS
+
 func _free_cells() -> Array:
 	var occ := {}
 	for c in snake:
 		occ[c] = true
 	var out := []
-	for x in range(COLS):
-		for y in range(ROWS):
-			if not occ.has(Vector2i(x, y)):
-				out.append(Vector2i(x, y))
+	for x in range(GS):
+		for y in range(GS):
+			for z in range(GS):
+				var c := Vector3i(x, y, z)
+				if not occ.has(c):
+					out.append(c)
 	return out
 
 func _spawn_apple() -> void:
@@ -117,27 +125,52 @@ func _spawn_apple() -> void:
 	golden = rng.randf() < 0.15
 	_refresh_apple()
 
-func queue_dir(d: Vector2i) -> void:
+func queue_dir(d: Vector3i) -> void:
 	if over or get_tree().paused:
 		return
-	var last: Vector2i = queued.back() if not queued.is_empty() else dir
-	if d + last != Vector2i.ZERO:
+	var last: Vector3i = queued.back() if not queued.is_empty() else dir
+	if d + last != Vector3i.ZERO:
 		if queued.size() < 3:
 			queued.append(d)
+
+## 화면 기준 조향 (sx:+오른쪽, sy:+아래): 카메라에 가장 맞는 수평/수직 방향으로 전환
+func _steer(sx: float, sy: float) -> void:
+	if over or get_tree().paused:
+		return
+	var r: Vector3 = cam.global_transform.basis.x
+	var u: Vector3 = cam.global_transform.basis.y
+	var wish: Vector3 = r * sx + u * -sy
+	if wish.length() < 0.05:
+		return
+	wish = wish.normalized()
+	var best := Vector3i.ZERO
+	var best_s := 0.3
+	for d in [Vector3i(1, 0, 0), Vector3i(-1, 0, 0), Vector3i(0, 1, 0), Vector3i(0, -1, 0), Vector3i(0, 0, 1), Vector3i(0, 0, -1)]:
+		if d == dir or d == -dir:
+			continue
+		var s: float = Vector3(d).dot(wish)
+		if s > best_s:
+			best_s = s
+			best = d
+	if best != Vector3i.ZERO:
+		queue_dir(best)
 
 func _physics_process(delta: float) -> void:
 	if over or get_tree().paused:
 		return
+	if stick != null and stick.value.length() > 0.4:
+		_steer(stick.value.x, stick.value.y)
 	acc += delta
 	while acc >= interval and not over:
 		acc -= interval
 		_step()
+	_update_camera(delta)
 
 func _step() -> void:
 	if not queued.is_empty():
 		dir = queued.pop_front()
-	var head: Vector2i = snake[0] + dir
-	if head.x < 0 or head.x >= COLS or head.y < 0 or head.y >= ROWS or head in snake:
+	var head: Vector3i = snake[0] + dir
+	if not _in_cube(head) or head in snake:
 		_die()
 		return
 	snake.push_front(head)
@@ -168,18 +201,53 @@ func _die() -> void:
 	msg_panel.visible = true
 	_refresh_ui()
 
+func _heading() -> Vector3:
+	return Vector3(dir)
+
+func _snap_camera() -> void:
+	_cam_flat = Vector3(dir.x, 0, dir.z)
+	if _cam_flat.length() < 0.05:
+		_cam_flat = Vector3(0, 0, -1)
+	var hp := cell_to_world(snake[0])
+	var h := _heading()
+	# 수직 이동 때도 앞이 보이게: 올라가면 카메라는 밑으로, 내려가면 위로
+	cam.position = hp - _cam_flat * 5.5 + Vector3(0, 2.2 - h.y * 3.0, 0)
+	cam.look_at(hp + h * 2.5 + _cam_flat * 0.6)
+
+func _update_camera(delta: float) -> void:
+	if snake.is_empty():
+		return
+	var h := _heading()
+	if absf(h.y) < 0.5 and h.length() > 0.05:
+		_cam_flat = Vector3(h.x, 0, h.z).normalized()
+	var hp := cell_to_world(snake[0])
+	var want_pos := hp - _cam_flat * 5.5 + Vector3(0, 2.2 - h.y * 3.0, 0)
+	var want_look := hp + h * 2.5 + _cam_flat * 0.6
+	var k := 1.0 - exp(-6.0 * delta)
+	cam.position = cam.position.lerp(want_pos, k)
+	var cur_fwd := -cam.global_transform.basis.z
+	var want_dir: Vector3 = (want_look - cam.position).normalized() if cam.position.distance_to(want_look) > 0.05 else cur_fwd
+	var cur_look: Vector3 = cam.position + cur_fwd
+	var look: Vector3 = cur_look.lerp(cam.position + want_dir * cur_look.distance_to(cam.position), k)
+	if look.distance_to(cam.position) > 0.05:
+		cam.look_at(look)
+
 func _refresh_body() -> void:
 	for c in _body_node.get_children():
 		c.queue_free()
+	var h := _heading()
+	var side := h.cross(Vector3.UP)
+	if side.length() < 0.1:
+		side = Vector3.RIGHT
+	side = side.normalized()
 	for i in range(snake.size()):
 		var mi := MeshInstance3D.new()
 		mi.mesh = _box_mesh
 		mi.material_override = _mat_for("head" if i == 0 else "body")
 		mi.position = cell_to_world(snake[i])
 		_body_node.add_child(mi)
-	# 머리 눈 (진행 방향)
 	if not snake.is_empty():
-		var fwd := Vector3(dir.x, 0, dir.y)
+		var hp := cell_to_world(snake[0])
 		for sx in [-1.0, 1.0]:
 			var eye := MeshInstance3D.new()
 			var sm := SphereMesh.new()
@@ -189,8 +257,7 @@ func _refresh_body() -> void:
 			em.albedo_color = Color(0.05, 0.05, 0.08)
 			sm.material = em
 			eye.mesh = sm
-			var side := Vector3(-fwd.z, 0, fwd.x)
-			eye.position = cell_to_world(snake[0]) + fwd * 0.35 + side * 0.2 * sx + Vector3(0, 0.25, 0)
+			eye.position = hp + h * 0.35 + side * 0.2 * sx + Vector3(0, 0.25, 0)
 			_body_node.add_child(eye)
 
 func _refresh_apple() -> void:
@@ -204,51 +271,42 @@ func _refresh_apple() -> void:
 	sm.height = 0.84 if golden else 0.68
 	sm.material = _mat_for("gold" if golden else "apple")
 	mi.mesh = sm
-	mi.position = cell_to_world(apple) + Vector3(0, 0.1, 0)
+	mi.position = cell_to_world(apple)
 	_apple_node.add_child(mi)
 
-func _build_floor() -> void:
-	var mats := {}
-	for k in ["a", "b"]:
-		var m := StandardMaterial3D.new()
-		m.albedo_color = Color(0.16, 0.18, 0.26) if k == "a" else Color(0.2, 0.22, 0.32)
-		m.roughness = 0.9
-		mats[k] = m
-	for x in range(COLS):
-		for y in range(ROWS):
-			var mi := MeshInstance3D.new()
-			var b := BoxMesh.new()
-			b.size = Vector3(0.98, 0.2, 0.98)
-			b.material = mats["a" if (x + y) % 2 == 0 else "b"]
-			mi.mesh = b
-			mi.position = Vector3(float(x) - 5.5, -0.1, float(y) - 5.5)
-			add_child(mi)
-	# 유리 테두리
+func _build_cube() -> void:
 	var edge := StandardMaterial3D.new()
 	edge.albedo_color = Color(0.5, 0.55, 0.7)
-	var hw := COLS * 0.5 + 0.05
+	var e := 4.5
+	var t := 0.12
 	for spec in [
-		[Vector3(0, 0.5, -hw), Vector3(COLS + 0.2, 1.0, 0.12)],
-		[Vector3(0, 0.5, hw), Vector3(COLS + 0.2, 1.0, 0.12)],
-		[Vector3(-hw, 0.5, 0), Vector3(0.12, 1.0, ROWS + 0.2)],
-		[Vector3(hw, 0.5, 0), Vector3(0.12, 1.0, ROWS + 0.2)],
+		[Vector3(e, 0, e), Vector3(t, 9.2, t)], [Vector3(-e, 0, e), Vector3(t, 9.2, t)],
+		[Vector3(e, 0, -e), Vector3(t, 9.2, t)], [Vector3(-e, 0, -e), Vector3(t, 9.2, t)],
+		[Vector3(0, e, e), Vector3(9.2, t, t)], [Vector3(0, -e, e), Vector3(9.2, t, t)],
+		[Vector3(0, e, -e), Vector3(9.2, t, t)], [Vector3(0, -e, -e), Vector3(9.2, t, t)],
+		[Vector3(e, e, 0), Vector3(t, t, 9.2)], [Vector3(-e, e, 0), Vector3(t, t, 9.2)],
+		[Vector3(e, -e, 0), Vector3(t, t, 9.2)], [Vector3(-e, -e, 0), Vector3(t, t, 9.2)],
 	]:
-		var mi2 := MeshInstance3D.new()
-		var b2 := BoxMesh.new()
-		b2.size = spec[1]
-		b2.material = edge
-		mi2.mesh = b2
-		mi2.position = spec[0]
-		add_child(mi2)
+		var mi := MeshInstance3D.new()
+		var b := BoxMesh.new()
+		b.size = spec[1]
+		b.material = edge
+		mi.mesh = b
+		mi.position = spec[0]
+		add_child(mi)
 
 # ---------- 입력/UI ----------
 
+var stick: VirtualStick
+
 func _wire_mobile() -> void:
-	var defs := {"MW": Vector2i(0, -1), "MA": Vector2i(-1, 0), "MS": Vector2i(0, 1), "MD": Vector2i(1, 0)}
-	for n in defs.keys():
-		var b: Button = mobile_pad.get_node_or_null(n) as Button
-		if b != null:
-			b.pressed.connect(queue_dir.bind(defs[n] as Vector2i))
+	stick = mobile_pad.get_node_or_null("Stick") as VirtualStick
+	var bu: Button = mobile_pad.get_node_or_null("MUp") as Button
+	if bu != null:
+		bu.pressed.connect(queue_dir.bind(Vector3i(0, 1, 0)))
+	var bd: Button = mobile_pad.get_node_or_null("MDown") as Button
+	if bd != null:
+		bd.pressed.connect(queue_dir.bind(Vector3i(0, -1, 0)))
 
 func _unhandled_key_input(event: InputEvent) -> void:
 	if not (event is InputEventKey):
@@ -256,22 +314,26 @@ func _unhandled_key_input(event: InputEvent) -> void:
 	var k := event as InputEventKey
 	if not k.pressed or k.echo:
 		return
-	match k.physical_keycode:
-		KEY_W, KEY_UP:
-			queue_dir(Vector2i(0, -1))
-		KEY_S, KEY_DOWN:
-			queue_dir(Vector2i(0, 1))
-		KEY_A, KEY_LEFT:
-			queue_dir(Vector2i(-1, 0))
-		KEY_D, KEY_RIGHT:
-			queue_dir(Vector2i(1, 0))
-		KEY_R:
-			restart()
-		KEY_P:
-			if get_tree().paused:
-				resume_game()
-			else:
-				pause_game()
+	var code := int(k.physical_keycode)
+	if code in Controls.keys_for("snake", "up"):
+		_steer(0.0, -1.0)
+	elif code in Controls.keys_for("snake", "down"):
+		_steer(0.0, 1.0)
+	elif code in Controls.keys_for("snake", "left"):
+		_steer(-1.0, 0.0)
+	elif code in Controls.keys_for("snake", "right"):
+		_steer(1.0, 0.0)
+	elif code in Controls.keys_for("snake", "altup"):
+		queue_dir(Vector3i(0, 1, 0))
+	elif code in Controls.keys_for("snake", "altdown"):
+		queue_dir(Vector3i(0, -1, 0))
+	elif code in Controls.keys_for("global", "restart"):
+		restart()
+	elif code in Controls.keys_for("global", "pause"):
+		if get_tree().paused:
+			resume_game()
+		else:
+			pause_game()
 
 func pause_game() -> void:
 	if over:

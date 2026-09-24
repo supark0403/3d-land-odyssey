@@ -1,4 +1,4 @@
-[gd_scene load_steps=9 format=4 uid="uid://c2048mines3d01"]
+[gd_scene format=4 uid="uid://daddg5lc88dto"]
 
 [ext_resource type="Script" path="res://scripts/mines3d.gd" id="1"]
 [ext_resource type="Script" path="res://scripts/camera_rig.gd" id="2"]
@@ -179,7 +179,7 @@ horizontal_alignment = 1
 custom_minimum_size = Vector2(320, 58)
 layout_mode = 2
 theme_override_font_sizes/font_size = 20
-text = "다시 시작 (R)"
+text = "다시 시작"
 
 [node name="MobilePad" type="Control" parent="UI"]
 visible = false
